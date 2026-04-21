@@ -1,0 +1,70 @@
+# ===================================================================
+# Experiment v2: Domain-Shift Augmentations
+# ===================================================================
+# Goal: Close the CV-LB gap (~0.15) by making training data
+# distribution closer to passive Pantanal soundscapes.
+#
+# Changes from baseline:
+#   + Background noise injection (pink/brown/white, 5-20dB SNR)
+#   + Random gain scaling (±6dB)
+#   + Random LP/HP filtering (simulates distance & mic variation)
+#   + Silence embedding (sparse vocalization in quiet window)
+#   All original augmentations (SpecAugment, mixup, Gaussian) retained.
+# ===================================================================
+
+run_name: v2_augment_fold0
+seed: 42
+fold: 0
+
+# Data
+folds_csv: data/folds/folds.csv
+spec_dir: data/processed
+train_meta_csv: data/raw/train.csv
+audio_dir: data/raw/train_audio
+num_workers: 4
+
+# Model (same as baseline)
+backbone: tf_efficientnet_b0_ns
+num_classes: 234
+dropout: 0.3
+pretrained: true
+
+# Training (same as baseline)
+epochs: 30
+batch_size: 32
+lr: 1.0e-3
+weight_decay: 1.0e-4
+scheduler: cosine
+warmup_epochs: 2
+
+# Loss (BCE — same as baseline)
+loss: bce
+
+# === Original augmentations (retained) ===
+spec_augment: true
+time_mask_max: 50
+freq_mask_max: 20
+mixup_alpha: 0.4
+gaussian_noise_std: 0.01
+
+# === NEW: Domain-shift augmentations ===
+# Background noise injection
+bg_noise: true
+aug_bg_noise_p: 0.5          # 50% of training samples
+snr_min_db: 5.0              # aggressive noise at low end
+snr_max_db: 20.0             # light noise at high end
+
+# Random gain/volume
+random_gain: true
+aug_gain_p: 0.5
+gain_range_db: 6.0            # ±6dB
+
+# Random filtering (distance + mic simulation)
+random_filter: true
+aug_filter_p: 0.4             # 40% — moderate
+
+# Silence embedding (short clip in long silent window)
+silence_embed: true
+aug_silence_p: 0.3            # 30% — not too frequent
+sample_rate: 32000
+window_seconds: 5.0

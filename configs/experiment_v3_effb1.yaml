@@ -1,0 +1,61 @@
+# ===================================================================
+# Experiment v3: EfficientNet-B1 + Domain-Shift Augmentations
+# ===================================================================
+# Changes from v2_augment:
+#   + Backbone: EfficientNet-B1 (7.8M params vs B0's 4.3M)
+#   + Batch size reduced 32→24 for memory
+#
+# IMPORTANT: After training, profile ONNX inference time on CPU.
+# If per-window inference exceeds ~25ms, this won't fit the 90-min
+# budget. Do NOT go to B2+ without verifying B1 timing.
+# ===================================================================
+
+run_name: v3_effb1_fold0
+seed: 42
+fold: 0
+
+# Data
+folds_csv: data/folds/folds.csv
+spec_dir: data/processed
+train_meta_csv: data/raw/train.csv
+audio_dir: data/raw/train_audio
+num_workers: 4
+
+# Model — CHANGED: B1 backbone
+backbone: tf_efficientnet_b1_ns
+num_classes: 234
+dropout: 0.3
+pretrained: true
+
+# Training — batch_size reduced for larger model
+epochs: 30
+batch_size: 24
+lr: 1.0e-3
+weight_decay: 1.0e-4
+scheduler: cosine
+warmup_epochs: 2
+
+# Loss (use whatever worked best in v2 experiments)
+loss: bce
+
+# Original augmentations
+spec_augment: true
+time_mask_max: 50
+freq_mask_max: 20
+mixup_alpha: 0.4
+gaussian_noise_std: 0.01
+
+# Domain-shift augmentations (same as v2)
+bg_noise: true
+aug_bg_noise_p: 0.5
+snr_min_db: 5.0
+snr_max_db: 20.0
+random_gain: true
+aug_gain_p: 0.5
+gain_range_db: 6.0
+random_filter: true
+aug_filter_p: 0.4
+silence_embed: true
+aug_silence_p: 0.3
+sample_rate: 32000
+window_seconds: 5.0
