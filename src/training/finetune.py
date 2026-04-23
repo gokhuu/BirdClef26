@@ -233,9 +233,9 @@ def main():
     scaler = torch.amp.GradScaler("cuda") if use_amp else None
 
     # Experiment dir
+    base_name = cfg.get("experiment_name", "sed_finetune")
     run_name = os.environ.get("BIRDCLEF_RUN_NAME") \
-            or cfg.get("run_name") \
-            or f"sed_finetune_fold{cfg['fold']}"
+            or f"{base_name}_fold{cfg['fold']}"
     exp_dir = Path("experiments") / run_name
     exp_dir.mkdir(parents=True, exist_ok=True)
     with open(exp_dir / "config.yaml", "w") as f:

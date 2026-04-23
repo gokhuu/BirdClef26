@@ -175,3 +175,31 @@ def cache_spectrograms(
                   f"failed={stats['failed']}")
 
     return stats
+
+# ===================================================================
+# CLI entry point
+# ===================================================================
+
+if __name__ == "__main__":
+    import argparse
+    import pandas as pd
+
+    parser = argparse.ArgumentParser(description="Cache focal mel-specs to .npy files")
+    parser.add_argument("--train-csv",  default="data/raw/train.csv")
+    parser.add_argument("--audio-dir",  default="data/raw/train_audio")
+    parser.add_argument("--output-dir", default="data/processed")
+    args = parser.parse_args()
+
+    df = pd.read_csv(args.train_csv)
+    file_list = df["filename"].tolist()
+    print(f"Files to process: {len(file_list)}")
+    print(f"Audio source:     {args.audio_dir}")
+    print(f"Cache target:     {args.output_dir}")
+    print()
+
+    stats = cache_spectrograms(
+        audio_dir=args.audio_dir,
+        output_dir=args.output_dir,
+        file_list=file_list,
+    )
+    print(f"\nDone: {stats}")
