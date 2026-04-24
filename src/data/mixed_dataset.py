@@ -27,39 +27,27 @@ from torch.utils.data import Dataset
 from typing import Optional
 
 
+# src/data/mixed_dataset.py
 class MixedDataset(Dataset):
-    def __init__(
-        self,
-        focal_dataset: Dataset,
-        soundscape_dataset: Dataset,
-        soundscape_ratio: float,
-        epoch_size: Optional[int] = None,
-    ):
-        if not 0.0 <= soundscape_ratio <= 1.0:
-            raise ValueError(f"soundscape_ratio must be in [0, 1], got {soundscape_ratio}")
-        if len(soundscape_dataset) == 0:
-            raise ValueError("soundscape_dataset is empty — check folds assignment")
-
-        self.focal = focal_dataset
-        self.soundscape = soundscape_dataset
-        self.ratio = soundscape_ratio
-        self._len = epoch_size if epoch_size is not None else len(focal_dataset)
-
+    def __init__(self, datasets, ratios, epoch_size=None):
+        if len(datasets) != len(ratios):
+            raise ValueError(f"got {len(datasets)} datasets, {len(ratios)} ratios")
+        if not abs(sum(ratios) - 1.0) < 1e-6:
+            raise ValueError(f"ratios must sum to 1, got {sum(ratios)}")
+        if any(len(d) == 0 for d in datasets):
+            raise ValueError("one of the datasets is empty")
+        
+        self.datasets = list(datasets)
+        self.ratios = np.asarray(ratios, dtype=np.float64)
+        self._cum = np.cumsum(self.ratios)
+        self._len = epoch_size if epoch_size is not None else len(datasets[0])
+    
     def __len__(self):
         return self._len
-
+    
     def __getitem__(self, idx):
-        # Per-sample Bernoulli draw. Uses numpy (not torch) to match the
-        # idiom used inside BirdCLEFDataset (np.random.random for mixup gate).
-        if np.random.random() < self.ratio:
-            sc_idx = np.random.randint(len(self.soundscape))
-            return self.soundscape[sc_idx]
-        # Focal path — modulo in case epoch_size > len(focal), though we
-        # default to epoch_size == len(focal), so this is a no-op usually.
-        focal_idx = idx % len(self.focal)
-        return self.focal[focal_idx]
-
-    def __repr__(self):
-        return (f"MixedDataset(focal={len(self.focal)}, "
-                f"soundscape={len(self.soundscape)}, "
-                f"ratio={self.ratio}, epoch_size={self._len})")
+        which = int(np.searchsorted(self._cum, np.random.random()))
+        ds = self.datasets[which]
+        if which == 0:                          # focal anchors the index
+            return ds[idx % len(ds)]
+        return ds[np.random.randint(len(ds))]   # others sampled uniformly

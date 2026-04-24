@@ -12,6 +12,10 @@ def build_model(config):
     Supports:
       model_type: "classifier"  (default, backward-compatible with baseline)
       model_type: "sed"         (attention pooling over time)
+
+    For "sed": reads optional input_normalize and encoder_in_chans flags.
+    Defaults preserve B0 checkpoint compatibility (False and 1). ConvNeXt
+    configs must set input_normalize: true and encoder_in_chans: 3.
     """
     model_type = config.get("model_type", "classifier")
     backbone = config["backbone"]
@@ -33,6 +37,8 @@ def build_model(config):
             dropout=dropout,
             pretrained=pretrained,
             attention_hidden_dim=config.get("attention_hidden_dim", 128),
+            input_normalize=config.get("input_normalize", False),
+            encoder_in_chans=config.get("encoder_in_chans", 1),
         )
     else:
         raise ValueError(

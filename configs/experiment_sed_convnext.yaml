@@ -1,0 +1,68 @@
+# SED (Sound Event Detection) with ConvNeXt-tiny + attention pooling over time.
+# Used as an ensemble partner to sed_b0 for architectural diversity.
+#
+# Two ConvNeXt-specific flags, both REQUIRED:
+#   input_normalize   true   Per-sample standardize input. ConvNeXt uses
+#                            LayerNorm and cannot adapt to raw log-mel dB
+#                            scale like B0's BatchNorm can.
+#   encoder_in_chans  3      timm's in_chans=1 collapse of ConvNeXt's
+#                            aggressive 4x4 stride-4 stem kills ~30% of
+#                            pretrained filters on log-mel input. Using
+#                            in_chans=3 and broadcasting preserves the
+#                            pretrained RGB filter responses.
+#
+# Training recipe differs from sed_b0:
+#   lr           1e-3  -> 3e-4   (larger model, more parameters)
+#   warmup       2     -> 5      (longer warmup for LayerNorm stability)
+#   mixup_alpha  0.4   -> 0.2    (less aggressive early regularization)
+#   dropout      0.3   -> 0.2    (ConvNeXt has internal stochastic depth)
+#   weight_decay 1e-4  -> 5e-2   (ConvNeXt paper recipe)
+#
+# NOTE: run_name intentionally absent. Runner sets BIRDCLEF_RUN_NAME per fold.
+
+experiment_name: sed_convnext
+seed: 42
+
+# --- Data paths (must match baseline) ---
+train_meta_csv: data/raw/train.csv
+folds_csv: data/folds/folds.csv
+audio_dir: data/raw/train_audio
+spec_dir: data/processed
+fold: 0
+num_workers: 4
+
+# --- Model ---
+model_type: sed
+backbone: convnext_tiny
+num_classes: 234
+dropout: 0.2
+attention_hidden_dim: 128
+pretrained: true
+input_normalize: true
+encoder_in_chans: 3
+
+# --- Training (tuned for ConvNeXt stability) ---
+epochs: 30
+batch_size: 32
+lr: 3.0e-4
+weight_decay: 5.0e-2
+scheduler: cosine
+warmup_epochs: 5
+
+# --- Loss ---
+loss: bce
+
+# --- Augmentations ---
+spec_augment: true
+time_mask_max: 50
+freq_mask_max: 20
+mixup_alpha: 0.2
+gaussian_noise_std: 0.01
+
+# --- Spectrogram config (must match cached .npy files) ---
+sample_rate: 32000
+n_mels: 128
+fmax: 16000
+hop_length: 512
+n_fft: 2048
+window_seconds: 5.0

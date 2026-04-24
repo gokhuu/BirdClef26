@@ -1,0 +1,67 @@
+# ================================================================
+# Fine-tune of sed_b0 on focal + soundscape mix.
+#
+# Strategy: warm-start from sed_b0_fold{N}/best_model.pt and continue
+# training for 10 epochs with a small LR on a 70% focal / 30% soundscape
+# batch mix. Three-way validation each epoch (focal / soundscape / combined)
+# with best-checkpoint selection on soundscape val AUC.
+#
+# Run: python src/training/finetune.py configs/experiment_sed_b0_finetune.yaml --fold N
+# ================================================================
+
+experiment_name: sed_convnext_finetune
+backbone: convnext_tiny
+seed: 42
+
+# --- Warm-start from the focal-trained SED checkpoint for this fold ---
+# NOTE: pass --init-checkpoint on the command line for each fold so the
+# correct fold's checkpoint is loaded:
+#   --init-checkpoint experiments/sed_b0_foldN/best_model.pt
+init_checkpoint: experiments/sed_convnext_fold0/best_model.pt
+
+# --- Focal data (same as sed_b0.yaml) ---
+train_meta_csv: data/raw/train.csv
+folds_csv: data/folds/folds.csv
+audio_dir: data/raw/train_audio
+spec_dir: data/processed
+fold: 0
+num_workers: 4
+
+# --- Soundscape data (from preprocess_soundscapes.py) ---
+soundscape_folds_csv: data/folds/folds_soundscapes.csv
+soundscape_spec_dir: data/processed_soundscapes
+soundscape_ratio: 0.3
+
+# --- Model (must match sed_b0.yaml so checkpoint load succeeds) ---
+model_type: sed
+backbone: tf_efficientnet_b0_ns
+num_classes: 234
+dropout: 0.3
+attention_hidden_dim: 128
+pretrained: false                  # irrelevant — init_checkpoint overrides
+
+# --- Training (CHANGED from sed_b0.yaml) ---
+epochs: 10                         # was 30
+batch_size: 32
+lr: 1.0e-4                         # was 1e-3 (10x smaller for fine-tune)
+weight_decay: 1.0e-4
+scheduler: cosine
+warmup_epochs: 1                   # was 2
+
+# --- Loss (same as sed_b0.yaml) ---
+loss: bce
+
+# --- Augmentations (same as sed_b0.yaml) ---
+spec_augment: true
+time_mask_max: 50
+freq_mask_max: 20
+mixup_alpha: 0.4
+gaussian_noise_std: 0.01
+
+# --- Spectrogram config (must match cached .npy files) ---
+sample_rate: 32000
+n_mels: 128
+fmax: 16000
+hop_length: 512
+n_fft: 2048
+window_seconds: 5.0

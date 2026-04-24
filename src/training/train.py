@@ -334,7 +334,7 @@ def main():
     scheduler = build_scheduler(optimizer, cfg, len(loader_train))
 
     # AMP scaler
-    use_amp = device.type == "cuda"
+    use_amp = device.type == "cuda" and "convnext" not in cfg["backbone"].lower()
     scaler = torch.amp.GradScaler("cuda") if use_amp else None
 
     # Experiment directory

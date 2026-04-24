@@ -41,6 +41,7 @@ sys.path.insert(0, os.getcwd())
 from src.data.dataset import BirdCLEFDataset
 from src.data.soundscape_dataset import SoundscapeDataset
 from src.data.mixed_dataset import MixedDataset
+from src.data.pseudo_soundscape_dataset import PseudoSoundscapeDataset
 from src.training.losses import build_loss
 from src.models import build_model
 
@@ -64,10 +65,10 @@ def build_finetune_loaders(cfg: dict, target_species: list[str]):
                               (sc_val_ds,    sc_val_loader),
                               combined_val_loader
 
-    Train: MixedDataset(focal_train, soundscape_train, ratio).
+    Train: MixedDataset over focal + labeled soundscape (+ pseudo-labeled
+           soundscape, if `pseudo_labels_csv` is set in cfg).
     Val: three independent loaders — focal only, soundscape only, and
-         the concatenation. All three share a single forward pass per
-         val-set per epoch, which is fine because val is fast.
+         the concatenation. Pseudo-labels never enter validation.
     """
     aug_config = build_aug_config(cfg)
 
@@ -91,7 +92,7 @@ def build_finetune_loaders(cfg: dict, target_species: list[str]):
     focal_train = BirdCLEFDataset(mode="train", **focal_common, **focal_aug)
     focal_val   = BirdCLEFDataset(mode="val",   **focal_common)
 
-    # --- Soundscape datasets (new classes from Step 3) ---
+    # --- Labeled soundscape datasets ---
     soundscape_train = SoundscapeDataset(
         folds_csv=cfg["soundscape_folds_csv"],
         fold=cfg["fold"],
@@ -108,9 +109,34 @@ def build_finetune_loaders(cfg: dict, target_species: list[str]):
         target_species=target_species,
     )
 
-    # --- Mixed train dataset ---
-    ratio = cfg.get("soundscape_ratio", 0.3)
-    mixed_train = MixedDataset(focal_train, soundscape_train, ratio)
+    # --- Mixed train dataset (focal + sc [+ pseudo]) ---
+    sc_ratio = cfg.get("soundscape_ratio", 0.3)
+    sources = [focal_train, soundscape_train]
+    ratios  = [1.0 - sc_ratio, sc_ratio]
+    pseudo_train = None
+
+    pseudo_csv = cfg.get("pseudo_labels_csv")
+    if pseudo_csv:
+        if not os.path.exists(pseudo_csv):
+            raise FileNotFoundError(
+                f"pseudo_labels_csv set but not found: {pseudo_csv}"
+            )
+        pseudo_train = PseudoSoundscapeDataset(
+            pseudo_csv=pseudo_csv,
+            spec_dir=cfg.get("unlabeled_soundscape_spec_dir", cfg["soundscape_spec_dir"]),
+            target_species=target_species,
+            aug_config=aug_config,
+            label_smoothing=cfg.get("pseudo_label_smoothing", 0.0),
+        )
+        pseudo_ratio = cfg.get("pseudo_ratio", 0.3)
+        if not 0.0 < pseudo_ratio < 1.0:
+            raise ValueError(f"pseudo_ratio must be in (0, 1), got {pseudo_ratio}")
+        # Carve pseudo_ratio out of the total; preserve focal:sc proportion
+        keep = 1.0 - pseudo_ratio
+        ratios = [r * keep for r in ratios] + [pseudo_ratio]
+        sources.append(pseudo_train)
+
+    mixed_train = MixedDataset(sources, ratios)
 
     # --- Loaders ---
     bs = cfg["batch_size"]
@@ -135,8 +161,10 @@ def build_finetune_loaders(cfg: dict, target_species: list[str]):
     )
 
     print(f"  focal train: {len(focal_train)}  | soundscape train: {len(soundscape_train)}")
+    if pseudo_train is not None:
+        print(f"  pseudo train: {len(pseudo_train)}")
     print(f"  focal val:   {len(focal_val)}    | soundscape val:   {len(soundscape_val)}")
-    print(f"  mixed epoch length: {len(mixed_train)} (ratio={ratio})")
+    print(f"  mixed epoch length: {len(mixed_train)}  ratios={[round(r, 3) for r in ratios]}")
 
     return (train_loader,
             focal_val, focal_val_loader,
@@ -186,6 +214,13 @@ def main():
 
     with open(args.config) as f:
         cfg = yaml.safe_load(f)
+
+    base_path = cfg.pop("base_config", None)
+    if base_path:
+        with open(base_path) as f:
+            base = yaml.safe_load(f)
+        base.update(cfg)   # child overrides parent
+        cfg = base
 
     if args.fold is not None:
         cfg["fold"] = args.fold
@@ -242,7 +277,7 @@ def main():
         yaml.dump(cfg, f, default_flow_style=False)
 
     log_rows = []
-    best_sc_auc = 0.0
+    best_comb_auc = 0.0
     best_epoch = -1
 
     print(f"\n{'='*64}")
@@ -289,9 +324,9 @@ def main():
             "time_s": elapsed,
         })
 
-        is_best = sc_auc > best_sc_auc
+        is_best = comb_auc > best_comb_auc
         if is_best:
-            best_sc_auc = sc_auc
+            best_comb_auc = comb_auc
             best_epoch = epoch + 1
             torch.save(model.state_dict(), exp_dir / "best_model.pt")
 
@@ -321,7 +356,7 @@ def main():
 
     print(f"\n{'='*64}")
     print(f"Done: {run_name}")
-    print(f"Best epoch: {best_epoch}  |  best soundscape val AUC: {best_sc_auc:.4f}")
+    print(f"Best epoch: {best_epoch}  |  best combined val AUC: {best_comb_auc:.4f}")
     print(f"Outputs: {exp_dir}")
     print(f"{'='*64}")
 

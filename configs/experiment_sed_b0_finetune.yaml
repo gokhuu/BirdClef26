@@ -4,19 +4,18 @@
 # Strategy: warm-start from sed_b0_fold{N}/best_model.pt and continue
 # training for 10 epochs with a small LR on a 70% focal / 30% soundscape
 # batch mix. Three-way validation each epoch (focal / soundscape / combined)
-# with best-checkpoint selection on combined val AUC.
+# with best-checkpoint selection on soundscape val AUC.
 #
 # Run: python src/training/finetune.py configs/experiment_sed_b0_finetune.yaml --fold N
 # ================================================================
 
 experiment_name: sed_finetune
-run_name: sed_finetune_fold0       # fold suffix overridden by runner or --fold
 seed: 42
 
 # --- Warm-start from the focal-trained SED checkpoint for this fold ---
-# NOTE: the fold runner (if/when we build one) substitutes {fold} in this
-# path. For single-fold manual runs, edit this to match the fold you pass
-# via --fold, or pass --init-checkpoint on the command line.
+# NOTE: pass --init-checkpoint on the command line for each fold so the
+# correct fold's checkpoint is loaded:
+#   --init-checkpoint experiments/sed_b0_foldN/best_model.pt
 init_checkpoint: experiments/sed_b0_fold0/best_model.pt
 
 # --- Focal data (same as sed_b0.yaml) ---
@@ -27,7 +26,7 @@ spec_dir: data/processed
 fold: 0
 num_workers: 4
 
-# --- Soundscape data (NEW — from Step 2/3) ---
+# --- Soundscape data (from preprocess_soundscapes.py) ---
 soundscape_folds_csv: data/folds/folds_soundscapes.csv
 soundscape_spec_dir: data/processed_soundscapes
 soundscape_ratio: 0.3

@@ -8,10 +8,17 @@ learn to focus on frames with vocal activity.
 
 Pipeline:
   spectrogram (B, 1, n_mels, T)
-    -> EfficientNet forward_features -> (B, C, H', W')
-    -> mean over frequency (H')      -> (B, C, W')
-    -> attention pooling over time   -> (B, C)
-    -> dropout + linear              -> (B, num_classes) logits
+    -> optional per-sample standardization (input_normalize=True):
+       required for LayerNorm-based backbones like ConvNeXt; not
+       needed for BatchNorm backbones like EfficientNet.
+    -> optional mono->3ch broadcast (encoder_in_chans=3):
+       required for ConvNeXt because timm's in_chans=1 collapse of
+       the 4x4 stride-4 stem kills ~30% of pretrained filters on
+       log-mel input. B0's 3x3 stem tolerates in_chans=1 fine.
+    -> backbone forward_features -> (B, C, H', W')
+    -> mean over frequency (H')   -> (B, C, W')
+    -> attention pooling over time -> (B, C)
+    -> dropout + linear            -> (B, num_classes) logits
 """
 import timm
 import torch
@@ -48,10 +55,23 @@ class AttentionPooling(nn.Module):
 
 class BirdCLEFSED(nn.Module):
     """
-    EfficientNet backbone with attention temporal pooling.
+    Backbone with attention temporal pooling.
 
     Output shape is (B, num_classes) logits, identical to BirdCLEFModel,
     so the existing training loop, loss, and ONNX export work unchanged.
+
+    Args:
+        backbone: timm model name (e.g. "tf_efficientnet_b0_ns", "convnext_tiny")
+        num_classes: output classes
+        dropout: head dropout prob
+        pretrained: load ImageNet pretrained weights
+        attention_hidden_dim: hidden dim of attention MLP
+        input_normalize: if True, per-sample standardize input to ~(0, 1).
+            REQUIRED for ConvNeXt and other LayerNorm-based backbones.
+            Leave False for B0 to preserve checkpoint compatibility.
+        encoder_in_chans: input channels passed to the timm encoder. Default
+            is 1 (matches B0 training). Set to 3 for ConvNeXt — the mono
+            spec is broadcast to 3 identical channels inside forward().
     """
 
     def __init__(
@@ -61,13 +81,18 @@ class BirdCLEFSED(nn.Module):
         dropout: float = 0.3,
         pretrained: bool = True,
         attention_hidden_dim: int = 128,
+        input_normalize: bool = False,
+        encoder_in_chans: int = 1,
     ):
         super().__init__()
+        self.input_normalize = input_normalize
+        self.encoder_in_chans = encoder_in_chans
+
         # global_pool="" + num_classes=0 -> returns raw spatial feature maps
         self.encoder = timm.create_model(
             backbone,
             pretrained=pretrained,
-            in_chans=1,
+            in_chans=encoder_in_chans,
             num_classes=0,
             global_pool="",
         )
@@ -84,7 +109,18 @@ class BirdCLEFSED(nn.Module):
 
     def forward(self, x: torch.Tensor, return_attention: bool = False):
         # x: (B, 1, n_mels, T)
-        features = self.encoder(x)           # (B, C, H', W')  e.g. (B, 1280, 4, 10)
+
+        # Per-sample standardization (ConvNeXt needs this; B0 does not).
+        if self.input_normalize:
+            x_mean = x.mean(dim=(2, 3), keepdim=True)
+            x_std = x.std(dim=(2, 3), keepdim=True).clamp(min=1e-6)
+            x = (x - x_mean) / x_std
+
+        # Broadcast mono -> 3ch if encoder was built with in_chans=3.
+        if self.encoder_in_chans == 3:
+            x = x.expand(-1, 3, -1, -1)
+
+        features = self.encoder(x)           # (B, C, H', W')
         features = features.mean(dim=2)      # mean over frequency -> (B, C, W')
         pooled, att_weights = self.attention_pool(features)  # (B, C), (B, 1, W')
         logits = self.head(pooled)           # (B, num_classes)

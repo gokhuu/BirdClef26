@@ -1,9 +1,13 @@
 # SED (Sound Event Detection) with EfficientNet-B0 + attention pooling over time.
 # All training hyperparameters held constant vs. baseline so the delta isolates
 # the architectural change.
+#
+# NOTE: run_name is intentionally NOT set here. The per-fold runner sets
+# BIRDCLEF_RUN_NAME=sed_b0_fold{N} as an env var so each fold writes to
+# a distinct experiment dir. A static run_name in the config would cause
+# every fold to overwrite the same directory — a silent disaster.
 
 experiment_name: sed_b0
-run_name: sed_b0_fold0            # run_all_folds.py will override the fold suffix per fold
 seed: 42
 
 # --- Data paths (must match baseline) ---
@@ -11,15 +15,15 @@ train_meta_csv: data/raw/train.csv
 folds_csv: data/folds/folds.csv
 audio_dir: data/raw/train_audio
 spec_dir: data/processed
-fold: 0                           # default fold for single-fold train.py runs; runner overrides
+fold: 0
 num_workers: 4
 
 # --- Model ---
-model_type: sed                   # selects BirdCLEFSED
+model_type: sed
 backbone: tf_efficientnet_b0_ns
 num_classes: 234
 dropout: 0.3
-attention_hidden_dim: 128         # SED-specific: hidden dim of attention MLP
+attention_hidden_dim: 128
 pretrained: true
 
 # --- Training (identical to baseline) ---

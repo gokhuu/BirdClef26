@@ -1,0 +1,21 @@
+# configs/experiment_sed_b0_finetune_pseudo.yaml
+base_config: configs/experiment_sed_b0_finetune.yaml
+
+# --- Pseudo-label generation (used by generate_pseudo_labels.py) ---
+unlabeled_soundscape_spec_dir: data/processed_unlabeled_soundscapes
+pseudo_source_checkpoint_pattern: "experiments/sed_finetune_fold{fold}/best_model.pt"
+pseudo_inference_batch_size: 64
+pseudo_sharpening_T: 1.5
+pseudo_min_confidence: 0.3
+
+# Point at rebalanced CSV
+pseudo_labels_csv: data/pseudo/sed_b0_v2_pseudo_balanced.csv
+
+# Reduce influence — if v1 at 0.3 tanked, v2 at 0.15 is a safer test
+pseudo_ratio: 0.15
+
+# Cut training — best epochs were 17-18 on noisy data, classic overfit
+epochs: 12
+
+# Change experiment_name so you don't overwrite round-1 pseudo artifacts
+experiment_name: sed_finetune_pseudo_v2
