@@ -19,12 +19,21 @@ Usage:
     python src/training/finetune.py configs/experiment_sed_b0_finetune.yaml --fold 2
     python src/training/finetune.py configs/experiment_sed_b0_finetune.yaml \
         --fold 2 --init-checkpoint experiments/sed_b0_fold2/best_model.pt
+    python src/training/finetune.py configs/experiment_sed_b0_finetune.yaml \
+        --fold 2 --seed 123      # for seed ensembling
+
+v2.1 changes (seed ensembling support):
+  - --seed CLI flag overrides config seed
+  - random.seed() added (covers any stdlib random usage)
+  - DataLoader workers seeded via worker_init_fn (imported from train.py)
+  - Train DataLoader shuffle uses a seeded torch.Generator
 """
 
 import sys
 import os
 import yaml
 import time
+import random
 import argparse
 from pathlib import Path
 
@@ -53,6 +62,7 @@ from src.training.train import (
     compute_macro_auc,
     train_one_epoch,
     validate,
+    seed_worker,
 )
 
 
@@ -60,7 +70,8 @@ from src.training.train import (
 # Data loaders — focal train (mixed) + 3-way val
 # ===================================================================
 
-def build_finetune_loaders(cfg: dict, target_species: list[str]):
+def build_finetune_loaders(cfg: dict, target_species: list[str],
+                           generator: torch.Generator | None = None):
     """Return: train_loader, (focal_val_ds, focal_val_loader),
                               (sc_val_ds,    sc_val_loader),
                               combined_val_loader
@@ -69,6 +80,10 @@ def build_finetune_loaders(cfg: dict, target_species: list[str]):
            soundscape, if `pseudo_labels_csv` is set in cfg).
     Val: three independent loaders — focal only, soundscape only, and
          the concatenation. Pseudo-labels never enter validation.
+
+    The optional `generator` is used by the train loader's shuffle so that
+    batch ordering is deterministic given a fixed seed. Workers (train and
+    val) are seeded via worker_init_fn imported from train.py.
     """
     aug_config = build_aug_config(cfg)
 
@@ -146,18 +161,23 @@ def build_finetune_loaders(cfg: dict, target_species: list[str]):
         mixed_train,
         batch_size=bs, shuffle=True, num_workers=nw,
         pin_memory=True, drop_last=True,
+        worker_init_fn=seed_worker,
+        generator=generator,
     )
     focal_val_loader = DataLoader(
         focal_val,
         batch_size=bs * 2, shuffle=False, num_workers=nw, pin_memory=True,
+        worker_init_fn=seed_worker,
     )
     sc_val_loader = DataLoader(
         soundscape_val,
         batch_size=bs * 2, shuffle=False, num_workers=nw, pin_memory=True,
+        worker_init_fn=seed_worker,
     )
     combined_val_loader = DataLoader(
         ConcatDataset([focal_val, soundscape_val]),
         batch_size=bs * 2, shuffle=False, num_workers=nw, pin_memory=True,
+        worker_init_fn=seed_worker,
     )
 
     print(f"  focal train: {len(focal_train)}  | soundscape train: {len(soundscape_train)}")
@@ -210,6 +230,8 @@ def main():
     parser.add_argument("--fold", type=int, default=None, help="Override fold number")
     parser.add_argument("--init-checkpoint", default=None,
                         help="Override init_checkpoint path (e.g. for different fold)")
+    parser.add_argument("--seed", type=int, default=None,
+                        help="Override seed from config (use for seed ensembling)")
     args = parser.parse_args()
 
     with open(args.config) as f:
@@ -226,13 +248,22 @@ def main():
         cfg["fold"] = args.fold
     if args.init_checkpoint is not None:
         cfg["init_checkpoint"] = args.init_checkpoint
+    if args.seed is not None:
+        cfg["seed"] = args.seed
 
-    # Seed
+    # Seed everything
     seed = cfg.get("seed", 42)
+    random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(seed)
+
+    # Generator for train DataLoader shuffle (deterministic batch ordering per seed)
+    loader_generator = torch.Generator()
+    loader_generator.manual_seed(seed)
+
+    print(f"Seed: {seed}")
 
     # Device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -247,7 +278,7 @@ def main():
     (train_loader,
      focal_val_ds, focal_val_loader,
      sc_val_ds, sc_val_loader,
-     combined_val_loader) = build_finetune_loaders(cfg, target_species)
+     combined_val_loader) = build_finetune_loaders(cfg, target_species, generator=loader_generator)
     print(f"Data: fold {cfg['fold']}  classes={len(target_species)}")
 
     # Model — architecture from cfg, weights from init_checkpoint

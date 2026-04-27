@@ -1,37 +1,17 @@
+import pandas as pd
 import numpy as np
-import torch
-import onnxruntime as ort
-import sys, os
-sys.path.insert(0, os.getcwd())
-from src.models import build_model
-import yaml
+from scipy.stats import spearmanr
 
-# Load both versions
-cfg = yaml.safe_load(open("experiments/sed_finetune_fold0/config.yaml"))
-pt_model = build_model(cfg)
-pt_model.load_state_dict(torch.load(
-    "experiments/sed_finetune_fold0/best_model.pt",
-    map_location="cpu", weights_only=True
-))
-pt_model.eval()
+# Load OOFs
+b0 = pd.read_csv("experiments/sed_finetune_pseudo_v2_fold0/oof_preds_soundscape.csv")
+sx = pd.read_csv("experiments/seresnext_finetune_fold0/oof_preds_soundscape.csv")
 
-ort_session = ort.InferenceSession(
-    "experiments/sed_finetune_fold0/best_model.onnx",
-    providers=["CPUExecutionProvider"],
-)
+b0 = b0.sort_values("row_id").reset_index(drop=True)
+sx = sx.sort_values("row_id").reset_index(drop=True)
 
-# Run a dummy input through both
-x = np.random.randn(1, 1, 128, 313).astype(np.float32)
+species_cols = [c for c in b0.columns if c != "row_id"]
+b0_p = b0[species_cols].values.flatten()
+sx_p = sx[species_cols].values.flatten()
 
-with torch.no_grad():
-    pt_out = pt_model(torch.from_numpy(x)).numpy()
-
-ort_in_name = ort_session.get_inputs()[0].name
-ort_out = ort_session.run(None, {ort_in_name: x})[0]
-
-# Compare
-diff = np.abs(pt_out - ort_out).max()
-print(f"PyTorch out range: [{pt_out.min():.4f}, {pt_out.max():.4f}]")
-print(f"ONNX out range:    [{ort_out.min():.4f}, {ort_out.max():.4f}]")
-print(f"Max abs diff:      {diff:.2e}")
-print(f"Verdict: {'OK' if diff < 1e-3 else 'WARNING — significant divergence'}")
+print(f"Spearman: {spearmanr(b0_p, sx_p).statistic:.4f}")
+print(f"V2-S baseline correlation was: 0.6069")

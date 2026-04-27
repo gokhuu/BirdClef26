@@ -7,12 +7,19 @@ Single-fold training with configurable backbone, loss, and augmentations.
 Usage:
     python src/training/train.py configs/experiment_v2_augment.yaml
     python src/training/train.py configs/experiment_v2_augment.yaml --fold 2
+    python src/training/train.py configs/experiment_v2_augment.yaml --seed 123
 
 v2 changes:
   - Focal loss support (loss: focal in config)
   - Waveform augmentation config forwarded to dataset
   - Train soundscape integration
   - Augmentation config dict passed to dataset
+
+v2.1 changes (seed ensembling support):
+  - --seed CLI flag overrides config seed
+  - random.seed() added (covers any stdlib random usage)
+  - DataLoader workers seeded via worker_init_fn
+  - DataLoader shuffle uses a seeded torch.Generator
 """
 
 import sys
@@ -21,6 +28,7 @@ import yaml
 import time
 import copy
 import shutil
+import random
 import argparse
 import numpy as np
 import pandas as pd
@@ -70,6 +78,19 @@ class BirdCLEFModel(nn.Module):
 # ===================================================================
 # Helpers
 # ===================================================================
+
+def seed_worker(worker_id):
+    """DataLoader worker_init_fn — seed numpy + python random per worker.
+
+    PyTorch automatically derives a unique torch seed per worker from the
+    main process's torch seed, but numpy and stdlib random are NOT
+    automatically seeded in workers. This function fixes that, ensuring
+    augmentation behavior is deterministic given a fixed main-process seed.
+    """
+    worker_seed = torch.initial_seed() % 2**32
+    np.random.seed(worker_seed)
+    random.seed(worker_seed)
+
 
 def get_target_species(cfg: dict) -> list[str]:
     """Derive the ordered species list from taxonomy / sample_submission / train CSV."""
@@ -132,8 +153,13 @@ def build_aug_config(cfg: dict) -> dict:
     return aug
 
 
-def build_loaders(cfg: dict, target_species: list[str]):
-    """Return train and val DataLoaders for the configured fold."""
+def build_loaders(cfg: dict, target_species: list[str], generator: torch.Generator | None = None):
+    """Return train and val DataLoaders for the configured fold.
+
+    The optional `generator` is used by the train loader's shuffle so that
+    batch ordering is deterministic given a fixed seed. Workers are also
+    seeded via worker_init_fn.
+    """
     common = dict(
         folds_csv=cfg["folds_csv"],
         fold=cfg["fold"],
@@ -172,6 +198,8 @@ def build_loaders(cfg: dict, target_species: list[str]):
         num_workers=cfg.get("num_workers", 4),
         pin_memory=True,
         drop_last=True,
+        worker_init_fn=seed_worker,
+        generator=generator,
     )
     loader_val = DataLoader(
         ds_val,
@@ -179,6 +207,7 @@ def build_loaders(cfg: dict, target_species: list[str]):
         shuffle=False,
         num_workers=cfg.get("num_workers", 4),
         pin_memory=True,
+        worker_init_fn=seed_worker,
     )
     return loader_train, loader_val, ds_val
 
@@ -284,6 +313,8 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("config", help="Path to YAML config file")
     parser.add_argument("--fold", type=int, default=None, help="Override fold number")
+    parser.add_argument("--seed", type=int, default=None,
+                        help="Override seed from config (use for seed ensembling)")
     args = parser.parse_args()
 
     # Load config
@@ -292,13 +323,22 @@ def main():
 
     if args.fold is not None:
         cfg["fold"] = args.fold
+    if args.seed is not None:
+        cfg["seed"] = args.seed
 
-    # Seed
+    # Seed everything
     seed = cfg.get("seed", 42)
+    random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(seed)
+
+    # Generator for DataLoader shuffle (deterministic batch ordering per seed)
+    loader_generator = torch.Generator()
+    loader_generator.manual_seed(seed)
+
+    print(f"Seed: {seed}")
 
     # Device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -310,7 +350,7 @@ def main():
 
     # Data
     target_species = get_target_species(cfg)
-    loader_train, loader_val, ds_val = build_loaders(cfg, target_species)
+    loader_train, loader_val, ds_val = build_loaders(cfg, target_species, generator=loader_generator)
     print(f"Data: fold {cfg['fold']} — {len(loader_train.dataset)} train, "
           f"{len(loader_val.dataset)} val, {len(target_species)} classes")
 
