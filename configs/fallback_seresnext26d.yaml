@@ -1,0 +1,79 @@
+# FALLBACK: if V2-S smoke test fails or training collapses, use this config instead.
+# SEResNeXt26d is BN-native, grouped-conv + SE blocks, ~17M params.
+# Completely different family from B0 — real ensemble diversity.
+# Inference ~1.5-2x B0 on CPU, fits 5 folds in budget without quantization.
+
+# This is the focal pretrain config. Finetune config is identical structure, just swap epochs/LR as in finetune_effv2s.yaml.
+
+experiment_name: "seresnext26d_focal"
+seed: 42
+fold: 0
+
+model:
+  type: "BirdCLEFSED"
+  backbone: "seresnext26d_32x4d"     # timm — available out of the box
+  pretrained: true
+  encoder_in_chans: 1
+  num_classes: 234
+  timm_kwargs:
+    drop_path_rate: 0.1              # conservative; seresnext26d timm default is 0.0
+    drop_rate: 0.2
+  pooling:
+    type: "attention"
+  # Feature dim after backbone is 2048 for seresnext26d — your head should auto-infer via
+  # a dummy forward pass at init. If it's hardcoded to 1280 (B0 / V2-S), you need a conditional.
+
+data:
+  focal_dir: "data/processed"
+  focal_train_split: "fold_${fold}/train"
+  focal_val_split: "fold_${fold}/val"
+  spec_shape: [1, 128, 313]
+  normalize:
+    mean: -55.0
+    std: 17.0
+  sources:
+    - {name: "focal", ratio: 1.0}
+
+training:
+  epochs: 20
+  batch_size: 32
+  grad_accum: 1
+  num_workers: 4
+  amp: true
+  loss:
+    type: "bce"
+  optimizer:
+    type: "adamw"
+    lr: 3.0e-4                       # same as V2-S; seresnext is comparably sensitive
+    weight_decay: 1.0e-4
+  scheduler:
+    type: "cosine"
+    warmup_epochs: 1
+    min_lr: 1.0e-5
+  augmentation:
+    mixup_alpha: 0.2
+    specaug:
+      time_mask_param: 40
+      freq_mask_param: 24
+      num_time_masks: 2
+      num_freq_masks: 2
+  grad_clip: 1.0
+
+validation:
+  every_n_epochs: 1
+  metrics: ["macro_roc_auc", "mean_loss"]
+  batch_size: 64
+
+checkpoint:
+  save_best: true
+  monitor: "focal_val_macro_roc_auc"
+  mode: "max"
+  save_last: true
+
+logging:
+  log_every_n_steps: 50
+
+# Training speed: ~75s/epoch on 2060 Max-Q (faster than V2-S).
+# Full 5-fold focal pretrain: ~2.5h.
+# Full 5-fold finetune (10 epochs at ~60s/epoch): ~50min.
+# Total fallback training budget: ~3.5h — even faster than V2-S.

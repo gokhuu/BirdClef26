@@ -1,0 +1,60 @@
+# Phase 2 finetune for SEResNeXt26d — consumed by src/training/finetune.py
+# init_checkpoint supplied via --init-checkpoint CLI flag per-fold by the
+# orchestration script. Not set in config.
+#
+# Time: ~17 min/fold × 5 folds = ~1.4h.
+
+experiment_name: seresnext_finetune
+seed: 42
+fold: 0
+
+# Model — must match Phase 1 architecture for strict=True checkpoint load
+model_type: sed
+backbone: seresnext26d_32x4d
+num_classes: 234
+dropout: 0.3
+pretrained: false       # init_checkpoint overrides; don't redownload weights
+attention_hidden_dim: 128
+input_normalize: false
+encoder_in_chans: 1
+
+# Data
+train_meta_csv: data/raw/train.csv
+folds_csv: data/folds/folds.csv
+spec_dir: data/processed
+audio_dir: data/raw/train_audio
+
+# Soundscape mixing — identical to your B0 0.88 finetune
+soundscape_folds_csv: data/folds/folds_soundscapes.csv
+soundscape_spec_dir: data/processed_soundscapes
+soundscape_ratio: 0.3
+
+# NOTE: not using pseudo-labels for first SEResNeXt run. Rationale:
+#   - V2-S finetune (no pseudo) hit 0.95 combined val AUC fine
+#   - Adding pseudo + species cap is a separate experiment we can layer later
+#   - Cleanest A/B vs B0 baseline (which also wasn't pseudo'd in v10 — your
+#     0.882 pseudo_v2 was a refinement on top)
+
+# Spec
+sample_rate: 32000
+window_seconds: 5.0
+
+# Training — match B0 finetune LR exactly. SEResNeXt is BN-native, behaves
+# more like B0 than V2-S, so we don't need to halve the LR.
+epochs: 10
+batch_size: 32
+num_workers: 4
+lr: 1.0e-4              # same as B0 finetune (per your 0.88 config.yaml)
+weight_decay: 1.0e-4
+warmup_epochs: 1
+loss: bce
+
+# Augmentation matches B0 finetune
+spec_augment: true
+time_mask_max: 50
+freq_mask_max: 20
+aug_spec_p: 0.5
+mixup_alpha: 0.4
+aug_mixup_p: 0.5
+gaussian_noise_std: 0.01
+aug_noise_p: 0.5

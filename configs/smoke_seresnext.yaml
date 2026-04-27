@@ -1,0 +1,53 @@
+# Smoke test for SEResNeXt26d — flat schema matching src/training/train.py
+# Verifies the architecture trains on focal data before committing 3h.
+# Run: python -m src.training.train configs/smoke_seresnext.yaml --fold 0
+# Time: ~2.5 min on 2060 Max-Q (2 epochs, no aug, 1 fold)
+
+experiment_name: seresnext_smoke
+run_name: seresnext_smoke_fold0
+seed: 42
+fold: 0
+
+# Model — model_type: sed -> BirdCLEFSED via build_model
+# SEResNeXt26d feature dim is 2048 (vs 1280 for B0/V2-S). Your sed.py
+# uses self.encoder.num_features so this auto-adjusts.
+model_type: sed
+backbone: seresnext26d_32x4d
+num_classes: 234
+dropout: 0.3
+pretrained: true
+attention_hidden_dim: 128
+input_normalize: false
+encoder_in_chans: 1
+
+# Data — identical to your B0 / V2-S configs
+train_meta_csv: data/raw/train.csv
+folds_csv: data/folds/folds.csv
+spec_dir: data/processed
+audio_dir: data/raw/train_audio
+
+# Spec config (must match preprocessed specs)
+sample_rate: 32000
+window_seconds: 5.0
+
+# Training — same recipe as your B0 baseline 0.882 run
+# (LR 1e-4 same as B0 because SEResNeXt is BN-native and not LR-fragile
+# the way V2-S was. No need to halve LR.)
+epochs: 2
+batch_size: 32          # if OOM, drop to 24 — SEResNeXt is heavier than B0
+num_workers: 4
+lr: 1.0e-4              # match B0 baseline LR
+weight_decay: 1.0e-4
+warmup_epochs: 1
+loss: bce
+
+# Augmentation OFF for smoke (isolates architecture signal)
+spec_augment: false
+mixup_alpha: 0.0
+gaussian_noise_std: 0.0
+
+# Kill criteria at end of epoch 2:
+#   - val_auc < 0.65        -> abort; SEResNeXt has the same problem as V2-S
+#   - train_loss not < 0.15 -> abort
+#   - any NaN/Inf            -> abort
+# Healthy: val_auc in [0.72, 0.85] (similar to V2-S smoke result of 0.82)

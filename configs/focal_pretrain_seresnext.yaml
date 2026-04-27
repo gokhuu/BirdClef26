@@ -1,0 +1,51 @@
+# Phase 1 focal pretrain for SEResNeXt26d.
+# Same recipe as your B0 0.882 baseline focal pretrain, just different backbone.
+# Target: focal val AUC in [0.91, 0.95] per fold.
+# Runtime: ~28 min/fold × 5 folds = ~2.3h on 2060 Max-Q.
+#
+# Run per fold (handled by orchestration script):
+#   BIRDCLEF_RUN_NAME=seresnext_focal_fold0 python -m src.training.train \
+#       configs/focal_pretrain_seresnext.yaml --fold 0
+
+experiment_name: seresnext_focal
+seed: 42
+fold: 0
+
+# Model
+model_type: sed
+backbone: seresnext26d_32x4d
+num_classes: 234
+dropout: 0.3
+pretrained: true
+attention_hidden_dim: 128
+input_normalize: false
+encoder_in_chans: 1
+
+# Data
+train_meta_csv: data/raw/train.csv
+folds_csv: data/folds/folds.csv
+spec_dir: data/processed
+audio_dir: data/raw/train_audio
+
+# Spec
+sample_rate: 32000
+window_seconds: 5.0
+
+# Training — same as B0 baseline 0.882 recipe
+epochs: 20
+batch_size: 32
+num_workers: 4
+lr: 1.0e-4              # B0 standard, SEResNeXt tolerates this fine
+weight_decay: 1.0e-4
+warmup_epochs: 1
+loss: bce
+
+# Augmentation matches B0 pretrain
+spec_augment: true
+time_mask_max: 50
+freq_mask_max: 20
+aug_spec_p: 0.5
+mixup_alpha: 0.4
+aug_mixup_p: 0.5
+gaussian_noise_std: 0.01
+aug_noise_p: 0.5

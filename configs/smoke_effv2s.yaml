@@ -1,0 +1,39 @@
+# Smoke test — flat schema matching src/training/train.py
+experiment_name: effv2s_smoke
+run_name: effv2s_smoke_fold0
+seed: 42
+fold: 0
+
+# Model (model_type: sed -> BirdCLEFSED via build_model)
+model_type: sed
+backbone: tf_efficientnetv2_s.in21k_ft_in1k
+num_classes: 234
+dropout: 0.3
+pretrained: true
+attention_hidden_dim: 128
+input_normalize: false
+encoder_in_chans: 1
+
+# Data
+train_meta_csv: data/raw/train.csv
+folds_csv: data/folds/folds.csv
+spec_dir: data/processed
+audio_dir: data/raw/train_audio
+
+# Spec params
+sample_rate: 32000
+window_seconds: 5.0
+
+# Training
+epochs: 2
+batch_size: 32
+num_workers: 4
+lr: 3.0e-4
+weight_decay: 1.0e-4
+warmup_epochs: 1
+loss: bce
+
+# Augmentation off for smoke
+spec_augment: false
+mixup_alpha: 0.0
+gaussian_noise_std: 0.0

@@ -1,0 +1,60 @@
+# B0 SED + pseudo_v2 finetune — exact replica of the 0.882 recipe.
+# Per-seed runs override seed via --seed CLI flag (finetune.py v2.1 supports this).
+# Init checkpoint per-fold is set via --init-checkpoint CLI flag in the orchestration.
+
+experiment_name: sed_finetune_pseudo_v2
+seed: 42                                 # overridden by --seed for non-default runs
+
+# Model — same as B0 0.882 baseline
+model_type: sed
+backbone: tf_efficientnet_b0_ns
+num_classes: 234
+dropout: 0.3
+pretrained: false                         # init_checkpoint overrides
+attention_hidden_dim: 128
+
+# Data
+fold: 0                                   # overridden by --fold
+train_meta_csv: data/raw/train.csv
+folds_csv: data/folds/folds.csv
+spec_dir: data/processed
+audio_dir: data/raw/train_audio
+
+# Soundscape mixing — identical to v2 winner
+soundscape_folds_csv: data/folds/folds_soundscapes.csv
+soundscape_spec_dir: data/processed_soundscapes
+soundscape_ratio: 0.3
+
+# Pseudo-label settings — the v2 config that got 0.882
+pseudo_labels_csv: data/pseudo/sed_b0_v2_pseudo_balanced.csv
+pseudo_ratio: 0.15
+pseudo_min_confidence: 0.3
+pseudo_sharpening_T: 1.5
+pseudo_inference_batch_size: 64
+pseudo_source_checkpoint_pattern: experiments/sed_finetune_fold{fold}/best_model.pt
+unlabeled_soundscape_spec_dir: data/processed_unlabeled_soundscapes
+
+# Spec
+sample_rate: 32000
+window_seconds: 5.0
+n_mels: 128
+n_fft: 2048
+hop_length: 512
+fmax: 16000
+
+# Training — match 0.882 baseline EXACTLY
+epochs: 12                                # NOTE: 12, not 10 — matches your winning config
+batch_size: 32
+num_workers: 4
+lr: 1.0e-4
+weight_decay: 1.0e-4
+warmup_epochs: 1
+scheduler: cosine
+loss: bce
+
+# Augmentation matches B0 finetune
+spec_augment: true
+time_mask_max: 50
+freq_mask_max: 20
+mixup_alpha: 0.4
+gaussian_noise_std: 0.01

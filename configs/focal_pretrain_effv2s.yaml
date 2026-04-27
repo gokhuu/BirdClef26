@@ -1,0 +1,44 @@
+# Phase 1 focal pretrain — flat schema matching src/training/train.py
+# Run per fold: BIRDCLEF_RUN_NAME=effv2s_focal_fold0 python -m src.training.train configs/focal_pretrain_effv2s.yaml --fold 0
+experiment_name: effv2s_focal
+seed: 42
+fold: 0
+
+# Model (model_type: sed -> BirdCLEFSED via build_model)
+model_type: sed
+backbone: tf_efficientnetv2_s.in21k_ft_in1k
+num_classes: 234
+dropout: 0.3
+pretrained: true
+attention_hidden_dim: 128
+input_normalize: false
+encoder_in_chans: 1
+
+# Data
+train_meta_csv: data/raw/train.csv
+folds_csv: data/folds/folds.csv
+spec_dir: data/processed
+audio_dir: data/raw/train_audio
+
+# Spec params
+sample_rate: 32000
+window_seconds: 5.0
+
+# Training
+epochs: 20
+batch_size: 32
+num_workers: 4
+lr: 3.0e-4
+weight_decay: 1.0e-4
+warmup_epochs: 1
+loss: bce
+
+# Augmentation ON to match B0 pretrain recipe
+spec_augment: true
+time_mask_max: 50
+freq_mask_max: 20
+aug_spec_p: 0.5
+mixup_alpha: 0.4
+aug_mixup_p: 0.5
+gaussian_noise_std: 0.01
+aug_noise_p: 0.5
