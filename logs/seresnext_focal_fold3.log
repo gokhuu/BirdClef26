@@ -1,0 +1,37 @@
+Device: cuda  (NVIDIA GeForce RTX 2060 with Max-Q Design)
+Data: fold 3 — 28445 train, 7104 val, 234 classes
+Model: seresnext26d_32x4d  params=15,501,803
+  Loss: BCEWithLogitsLoss
+
+============================================================
+Training: seresnext_focal_fold3
+============================================================
+
+/home/gokhuu/miniconda3/envs/birdclef/lib/python3.11/site-packages/torch/optim/lr_scheduler.py:198: UserWarning: The epoch parameter in `scheduler.step()` was not necessary and is being deprecated where possible. Please use `scheduler.step()` to step the scheduler. During the deprecation, if epoch is different from None, the closed form is used instead of the new chainable form, where available. Please open an issue if you are unable to replicate your use case: https://github.com/pytorch/pytorch/issues/new/choose.
+  warnings.warn(EPOCH_DEPRECATION_WARNING, UserWarning)
+  Epoch  1/20: train_loss=0.3276  val_loss=0.0422  val_auc=0.5095  lr=1.00e-04  (143s) ★ BEST
+  Epoch  2/20: train_loss=0.0310  val_loss=0.0267  val_auc=0.7399  lr=9.93e-05  (141s) ★ BEST
+  Epoch  3/20: train_loss=0.0269  val_loss=0.0227  val_auc=0.8481  lr=9.73e-05  (141s) ★ BEST
+  Epoch  4/20: train_loss=0.0238  val_loss=0.0197  val_auc=0.8944  lr=9.40e-05  (140s) ★ BEST
+  Epoch  5/20: train_loss=0.0219  val_loss=0.0182  val_auc=0.9108  lr=8.95e-05  (140s) ★ BEST
+  Epoch  6/20: train_loss=0.0203  val_loss=0.0169  val_auc=0.9207  lr=8.39e-05  (139s) ★ BEST
+  Epoch  7/20: train_loss=0.0191  val_loss=0.0162  val_auc=0.9303  lr=7.74e-05  (141s) ★ BEST
+  Epoch  8/20: train_loss=0.0183  val_loss=0.0154  val_auc=0.9380  lr=7.01e-05  (141s) ★ BEST
+  Epoch  9/20: train_loss=0.0175  val_loss=0.0150  val_auc=0.9416  lr=6.23e-05  (142s) ★ BEST
+  Epoch 10/20: train_loss=0.0168  val_loss=0.0146  val_auc=0.9440  lr=5.42e-05  (141s) ★ BEST
+  Epoch 11/20: train_loss=0.0163  val_loss=0.0143  val_auc=0.9466  lr=4.59e-05  (141s) ★ BEST
+  Epoch 12/20: train_loss=0.0158  val_loss=0.0140  val_auc=0.9485  lr=3.78e-05  (140s) ★ BEST
+  Epoch 13/20: train_loss=0.0152  val_loss=0.0137  val_auc=0.9484  lr=3.00e-05  (140s)
+  Epoch 14/20: train_loss=0.0147  val_loss=0.0135  val_auc=0.9509  lr=2.27e-05  (141s) ★ BEST
+  Epoch 15/20: train_loss=0.0144  val_loss=0.0134  val_auc=0.9518  lr=1.62e-05  (142s) ★ BEST
+  Epoch 16/20: train_loss=0.0141  val_loss=0.0133  val_auc=0.9531  lr=1.06e-05  (141s) ★ BEST
+  Epoch 17/20: train_loss=0.0138  val_loss=0.0132  val_auc=0.9536  lr=6.12e-06  (141s) ★ BEST
+  Epoch 18/20: train_loss=0.0135  val_loss=0.0131  val_auc=0.9539  lr=2.81e-06  (140s) ★ BEST
+  Epoch 19/20: train_loss=0.0133  val_loss=0.0131  val_auc=0.9535  lr=7.81e-07  (140s)
+  Epoch 20/20: train_loss=0.0134  val_loss=0.0131  val_auc=0.9537  lr=1.00e-07  (140s)
+
+============================================================
+Done: seresnext_focal_fold3
+Best epoch: 18  |  Best validation AUC: 0.9539
+Outputs saved to: experiments/seresnext_focal_fold3
+============================================================

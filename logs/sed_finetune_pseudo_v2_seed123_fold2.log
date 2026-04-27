@@ -1,0 +1,37 @@
+/home/gokhuu/miniconda3/envs/birdclef/lib/python3.11/site-packages/timm/models/_factory.py:138: UserWarning: Mapping deprecated model name tf_efficientnet_b0_ns to current tf_efficientnet_b0.ns_jft_in1k.
+  model = create_fn(
+Seed: 123
+Device: cuda  (NVIDIA GeForce RTX 2060 with Max-Q Design)
+  focal train: 28439  | soundscape train: 573
+  pseudo train: 64316
+  focal val:   7110    | soundscape val:   166
+  mixed epoch length: 28439  ratios=[0.595, 0.255, 0.15]
+Data: fold 2  classes=234
+  ✓ Loaded experiments/sed_b0_fold2/best_model.pt
+    364 tensors, 4,470,823 parameters, strict=True
+  Loss: BCEWithLogitsLoss
+
+================================================================
+Fine-tune: sed_finetune_pseudo_v2_seed123_fold2
+================================================================
+
+/home/gokhuu/miniconda3/envs/birdclef/lib/python3.11/site-packages/torch/optim/lr_scheduler.py:198: UserWarning: The epoch parameter in `scheduler.step()` was not necessary and is being deprecated where possible. Please use `scheduler.step()` to step the scheduler. During the deprecation, if epoch is different from None, the closed form is used instead of the new chainable form, where available. Please open an issue if you are unable to replicate your use case: https://github.com/pytorch/pytorch/issues/new/choose.
+  warnings.warn(EPOCH_DEPRECATION_WARNING, UserWarning)
+  Epoch  1/12: train=0.0518  focal_auc=0.9537  sc_auc=0.6501  comb_auc=0.9475  lr=1.00e-04  (124s) ★ BEST
+  Epoch  2/12: train=0.0193  focal_auc=0.9537  sc_auc=0.9161  comb_auc=0.9586  lr=9.80e-05  (121s) ★ BEST
+  Epoch  3/12: train=0.0124  focal_auc=0.9540  sc_auc=0.9400  comb_auc=0.9593  lr=9.21e-05  (121s) ★ BEST
+  Epoch  4/12: train=0.0108  focal_auc=0.9540  sc_auc=0.9485  comb_auc=0.9594  lr=8.28e-05  (114s) ★ BEST
+  Epoch  5/12: train=0.0103  focal_auc=0.9542  sc_auc=0.9516  comb_auc=0.9597  lr=7.08e-05  (114s) ★ BEST
+  Epoch  6/12: train=0.0098  focal_auc=0.9551  sc_auc=0.9569  comb_auc=0.9606  lr=5.72e-05  (112s) ★ BEST
+  Epoch  7/12: train=0.0096  focal_auc=0.9556  sc_auc=0.9547  comb_auc=0.9610  lr=4.29e-05  (111s) ★ BEST
+  Epoch  8/12: train=0.0094  focal_auc=0.9553  sc_auc=0.9514  comb_auc=0.9609  lr=2.93e-05  (112s)
+  Epoch  9/12: train=0.0092  focal_auc=0.9561  sc_auc=0.9541  comb_auc=0.9616  lr=1.73e-05  (112s) ★ BEST
+  Epoch 10/12: train=0.0091  focal_auc=0.9560  sc_auc=0.9535  comb_auc=0.9614  lr=8.03e-06  (112s)
+  Epoch 11/12: train=0.0091  focal_auc=0.9563  sc_auc=0.9545  comb_auc=0.9617  lr=2.12e-06  (112s) ★ BEST
+  Epoch 12/12: train=0.0091  focal_auc=0.9561  sc_auc=0.9526  comb_auc=0.9615  lr=1.00e-07  (113s)
+
+================================================================
+Done: sed_finetune_pseudo_v2_seed123_fold2
+Best epoch: 11  |  best combined val AUC: 0.9617
+Outputs: experiments/sed_finetune_pseudo_v2_seed123_fold2
+================================================================

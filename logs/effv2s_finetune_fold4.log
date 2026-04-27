@@ -1,0 +1,31 @@
+Device: cuda  (NVIDIA GeForce RTX 2060 with Max-Q Design)
+  focal train: 28446  | soundscape train: 643
+  focal val:   7103    | soundscape val:   96
+  mixed epoch length: 28446  ratios=[0.7, 0.3]
+Data: fold 4  classes=234
+  ✓ Loaded experiments/effv2s_focal_fold4/best_model.pt
+    786 tensors, 20,640,907 parameters, strict=True
+  Loss: BCEWithLogitsLoss
+
+================================================================
+Fine-tune: effv2s_finetune_fold4
+================================================================
+
+/home/gokhuu/miniconda3/envs/birdclef/lib/python3.11/site-packages/torch/optim/lr_scheduler.py:198: UserWarning: The epoch parameter in `scheduler.step()` was not necessary and is being deprecated where possible. Please use `scheduler.step()` to step the scheduler. During the deprecation, if epoch is different from None, the closed form is used instead of the new chainable form, where available. Please open an issue if you are unable to replicate your use case: https://github.com/pytorch/pytorch/issues/new/choose.
+  warnings.warn(EPOCH_DEPRECATION_WARNING, UserWarning)
+  Epoch  1/10: train=0.0445  focal_auc=0.9597  sc_auc=0.6065  comb_auc=0.9496  lr=5.00e-05  (179s) ★ BEST
+  Epoch  2/10: train=0.0149  focal_auc=0.9601  sc_auc=0.8407  comb_auc=0.9572  lr=4.85e-05  (178s) ★ BEST
+  Epoch  3/10: train=0.0094  focal_auc=0.9589  sc_auc=0.8444  comb_auc=0.9526  lr=4.42e-05  (178s)
+  Epoch  4/10: train=0.0084  focal_auc=0.9594  sc_auc=0.8242  comb_auc=0.9541  lr=3.75e-05  (178s)
+  Epoch  5/10: train=0.0080  focal_auc=0.9591  sc_auc=0.8065  comb_auc=0.9499  lr=2.94e-05  (178s)
+  Epoch  6/10: train=0.0076  focal_auc=0.9593  sc_auc=0.8070  comb_auc=0.9474  lr=2.07e-05  (178s)
+  Epoch  7/10: train=0.0074  focal_auc=0.9593  sc_auc=0.8029  comb_auc=0.9462  lr=1.26e-05  (179s)
+  Epoch  8/10: train=0.0073  focal_auc=0.9585  sc_auc=0.8224  comb_auc=0.9466  lr=5.94e-06  (178s)
+  Epoch  9/10: train=0.0072  focal_auc=0.9590  sc_auc=0.8035  comb_auc=0.9455  lr=1.60e-06  (179s)
+  Epoch 10/10: train=0.0072  focal_auc=0.9586  sc_auc=0.8230  comb_auc=0.9456  lr=1.00e-07  (179s)
+
+================================================================
+Done: effv2s_finetune_fold4
+Best epoch: 2  |  best combined val AUC: 0.9572
+Outputs: experiments/effv2s_finetune_fold4
+================================================================

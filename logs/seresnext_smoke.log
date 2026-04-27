@@ -1,0 +1,19 @@
+Device: cuda  (NVIDIA GeForce RTX 2060 with Max-Q Design)
+Data: fold 0 — 28431 train, 7118 val, 234 classes
+Model: seresnext26d_32x4d  params=15,501,803
+  Loss: BCEWithLogitsLoss
+
+============================================================
+Training: seresnext_smoke_fold0
+============================================================
+
+/home/gokhuu/miniconda3/envs/birdclef/lib/python3.11/site-packages/torch/optim/lr_scheduler.py:198: UserWarning: The epoch parameter in `scheduler.step()` was not necessary and is being deprecated where possible. Please use `scheduler.step()` to step the scheduler. During the deprecation, if epoch is different from None, the closed form is used instead of the new chainable form, where available. Please open an issue if you are unable to replicate your use case: https://github.com/pytorch/pytorch/issues/new/choose.
+  warnings.warn(EPOCH_DEPRECATION_WARNING, UserWarning)
+  Epoch  1/2: train_loss=0.3199  val_loss=0.0414  val_auc=0.5123  lr=1.00e-04  (120s) ★ BEST
+  Epoch  2/2: train_loss=0.0301  val_loss=0.0254  val_auc=0.7623  lr=1.00e-07  (117s) ★ BEST
+
+============================================================
+Done: seresnext_smoke_fold0
+Best epoch: 2  |  Best validation AUC: 0.7623
+Outputs saved to: experiments/seresnext_smoke_fold0
+============================================================

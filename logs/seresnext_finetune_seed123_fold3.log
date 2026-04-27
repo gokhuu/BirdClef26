@@ -1,0 +1,32 @@
+Seed: 123
+Device: cuda  (NVIDIA GeForce RTX 2060 with Max-Q Design)
+  focal train: 28445  | soundscape train: 566
+  focal val:   7104    | soundscape val:   173
+  mixed epoch length: 28445  ratios=[0.7, 0.3]
+Data: fold 3  classes=234
+  ✓ Loaded experiments/seresnext_focal_fold3/best_model.pt
+    224 tensors, 15,501,803 parameters, strict=True
+  Loss: BCEWithLogitsLoss
+
+================================================================
+Fine-tune: seresnext_finetune_seed123_fold3
+================================================================
+
+/home/gokhuu/miniconda3/envs/birdclef/lib/python3.11/site-packages/torch/optim/lr_scheduler.py:198: UserWarning: The epoch parameter in `scheduler.step()` was not necessary and is being deprecated where possible. Please use `scheduler.step()` to step the scheduler. During the deprecation, if epoch is different from None, the closed form is used instead of the new chainable form, where available. Please open an issue if you are unable to replicate your use case: https://github.com/pytorch/pytorch/issues/new/choose.
+  warnings.warn(EPOCH_DEPRECATION_WARNING, UserWarning)
+  Epoch  1/10: train=0.0394  focal_auc=0.9469  sc_auc=0.7914  comb_auc=0.9468  lr=1.00e-04  (145s) ★ BEST
+  Epoch  2/10: train=0.0139  focal_auc=0.9426  sc_auc=0.8971  comb_auc=0.9458  lr=9.70e-05  (144s)
+  Epoch  3/10: train=0.0115  focal_auc=0.9477  sc_auc=0.8809  comb_auc=0.9483  lr=8.83e-05  (144s) ★ BEST
+  Epoch  4/10: train=0.0111  focal_auc=0.9488  sc_auc=0.8785  comb_auc=0.9490  lr=7.50e-05  (144s) ★ BEST
+  Epoch  5/10: train=0.0107  focal_auc=0.9495  sc_auc=0.8599  comb_auc=0.9450  lr=5.87e-05  (144s)
+  Epoch  6/10: train=0.0101  focal_auc=0.9518  sc_auc=0.8987  comb_auc=0.9523  lr=4.14e-05  (144s) ★ BEST
+  Epoch  7/10: train=0.0097  focal_auc=0.9519  sc_auc=0.9006  comb_auc=0.9523  lr=2.51e-05  (144s) ★ BEST
+  Epoch  8/10: train=0.0093  focal_auc=0.9531  sc_auc=0.8937  comb_auc=0.9535  lr=1.18e-05  (144s) ★ BEST
+  Epoch  9/10: train=0.0091  focal_auc=0.9545  sc_auc=0.8965  comb_auc=0.9544  lr=3.11e-06  (144s) ★ BEST
+  Epoch 10/10: train=0.0089  focal_auc=0.9550  sc_auc=0.8993  comb_auc=0.9547  lr=1.00e-07  (144s) ★ BEST
+
+================================================================
+Done: seresnext_finetune_seed123_fold3
+Best epoch: 10  |  best combined val AUC: 0.9547
+Outputs: experiments/seresnext_finetune_seed123_fold3
+================================================================

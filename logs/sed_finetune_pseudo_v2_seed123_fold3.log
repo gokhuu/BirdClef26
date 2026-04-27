@@ -1,0 +1,26 @@
+/home/gokhuu/miniconda3/envs/birdclef/lib/python3.11/site-packages/timm/models/_factory.py:138: UserWarning: Mapping deprecated model name tf_efficientnet_b0_ns to current tf_efficientnet_b0.ns_jft_in1k.
+  model = create_fn(
+Seed: 123
+Device: cuda  (NVIDIA GeForce RTX 2060 with Max-Q Design)
+  focal train: 28445  | soundscape train: 566
+  pseudo train: 64316
+  focal val:   7104    | soundscape val:   173
+  mixed epoch length: 28445  ratios=[0.595, 0.255, 0.15]
+Data: fold 3  classes=234
+  ✓ Loaded experiments/sed_b0_fold3/best_model.pt
+    364 tensors, 4,470,823 parameters, strict=True
+  Loss: BCEWithLogitsLoss
+
+================================================================
+Fine-tune: sed_finetune_pseudo_v2_seed123_fold3
+================================================================
+
+/home/gokhuu/miniconda3/envs/birdclef/lib/python3.11/site-packages/torch/optim/lr_scheduler.py:198: UserWarning: The epoch parameter in `scheduler.step()` was not necessary and is being deprecated where possible. Please use `scheduler.step()` to step the scheduler. During the deprecation, if epoch is different from None, the closed form is used instead of the new chainable form, where available. Please open an issue if you are unable to replicate your use case: https://github.com/pytorch/pytorch/issues/new/choose.
+  warnings.warn(EPOCH_DEPRECATION_WARNING, UserWarning)
+  Epoch  1/12: train=0.0561  focal_auc=0.9559  sc_auc=0.7140  comb_auc=0.9455  lr=1.00e-04  (112s) ★ BEST
+  Epoch  2/12: train=0.0196  focal_auc=0.9553  sc_auc=0.8736  comb_auc=0.9571  lr=9.80e-05  (98s) ★ BEST
+  Epoch  3/12: train=0.0122  focal_auc=0.9557  sc_auc=0.8942  comb_auc=0.9575  lr=9.21e-05  (90s) ★ BEST
+  Epoch  4/12: train=0.0108  focal_auc=0.9554  sc_auc=0.8952  comb_auc=0.9572  lr=8.28e-05  (86s)
+  Epoch  5/12: train=0.0100  focal_auc=0.9552  sc_auc=0.8881  comb_auc=0.9571  lr=7.08e-05  (90s)
+  Epoch  6/12: train=0.0097  focal_auc=0.9559  sc_auc=0.9163  comb_auc=0.9582  lr=5.72e-05  (104s) ★ BEST
+  Epoch  7/12: train=0.0094  focal_auc=0.9561  sc_auc=0.9063  comb_auc=0.9583  lr=4.29e-05  (101s) ★ BEST
