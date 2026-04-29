@@ -1,0 +1,100 @@
+# configs/finetune_pseudo_v3.yaml
+#
+# Phase A experiment: B0 SED + drop-don't-zero pseudo-labels + domain-shift
+# augmentations (FIRST run with these augs actually enabled).
+#
+# Changes vs finetune_pseudo_v2.yaml (the 0.882 baseline):
+#   1. pseudo_labels_csv -> v3 (drop-don't-zero rebalance, no label corruption)
+#   2. random_gain    enabled at p=0.5, +/- 6 dB
+#   3. random_filter  enabled at p=0.3 (lowpass + highpass biquad)
+#   4. bg_noise       enabled at p=0.3, SNR 5-20 dB (synthetic colored noise)
+#   5. experiment_name -> sed_finetune_pseudo_v3 (preserves v2 artifacts)
+#
+# Everything else (model, fold splits, LR schedule, epochs, mixup,
+# spec_augment, gaussian_noise) is byte-identical to v2.
+#
+# Per-fold init checkpoint passed via --init-checkpoint CLI flag, exactly
+# as in the v2 workflow.
+
+experiment_name: sed_finetune_pseudo_v3
+seed: 42
+
+# --- Model (UNCHANGED from v2) ---
+model_type: sed
+backbone: tf_efficientnet_b0_ns
+num_classes: 234
+dropout: 0.3
+pretrained: false
+attention_hidden_dim: 128
+
+# --- Data: focal (UNCHANGED) ---
+fold: 0
+train_meta_csv: data/raw/train.csv
+folds_csv: data/folds/folds.csv
+spec_dir: data/processed
+audio_dir: data/raw/train_audio
+
+# --- Data: soundscape mix (UNCHANGED) ---
+soundscape_folds_csv: data/folds/folds_soundscapes.csv
+soundscape_spec_dir: data/processed_soundscapes
+soundscape_ratio: 0.3
+
+# --- Pseudo-labels: CHANGED to v3 csv ---
+pseudo_labels_csv: data/pseudo/sed_b0_v3_pseudo_dropped.csv
+pseudo_ratio: 0.15
+pseudo_min_confidence: 0.3
+pseudo_sharpening_T: 1.5
+pseudo_inference_batch_size: 64
+pseudo_source_checkpoint_pattern: experiments/sed_finetune_fold{fold}/best_model.pt
+unlabeled_soundscape_spec_dir: data/processed_unlabeled_soundscapes
+
+# --- Spec params (UNCHANGED, must match cached .npy files) ---
+sample_rate: 32000
+window_seconds: 5.0
+n_mels: 128
+n_fft: 2048
+hop_length: 512
+fmax: 16000
+
+# --- Training (UNCHANGED — keep schedule comparable to v2) ---
+epochs: 12
+batch_size: 32
+num_workers: 4
+lr: 1.0e-4
+weight_decay: 1.0e-4
+warmup_epochs: 1
+scheduler: cosine
+loss: bce
+
+# --- Augmentations: baseline (UNCHANGED from v2) ---
+spec_augment: true
+time_mask_max: 50
+freq_mask_max: 20
+mixup_alpha: 0.4
+gaussian_noise_std: 0.01
+
+# --- Augmentations: domain-shift (NEW — first run with these on) ---
+# IMPORTANT: build_aug_config() in src/training/train.py only forwards
+# these to the dataset if BOTH the boolean switch (e.g. bg_noise: true)
+# AND the probability key (aug_bg_noise_p) are present in the YAML.
+# Setting just the prob is a silent no-op. Pairs are set explicitly below.
+# The diagnostic patch in finetune.py prints active augs at startup so
+# you can verify in the log.
+
+bg_noise: true
+aug_bg_noise_p: 0.3
+snr_min_db: 5.0
+snr_max_db: 20.0
+
+random_gain: true
+aug_gain_p: 0.5
+gain_range_db: 6.0
+
+random_filter: true
+aug_filter_p: 0.3
+
+# silence_embed: intentionally LEFT OFF for this run.
+# Reason: embed_silence_spec aggressively zeros 30-70% of time frames,
+# which compounds with mixup_alpha=0.4 and SpecAugment's time_mask_max=50
+# in ways that risk over-augmenting. Add it as a separate experiment if
+# Phase A succeeds.
