@@ -275,6 +275,30 @@ def main():
 
     # Data
     target_species = get_target_species(cfg)
+    # --- Aug config diagnostic (catches the YAML "switch + prob" footgun) ---
+    aug_config_preview = build_aug_config(cfg)
+    active_augs = {
+        k: v for k, v in aug_config_preview.items()
+        if k.endswith("_p") and isinstance(v, (int, float)) and v > 0
+    }
+    print("\nAugmentation config:")
+    print(f"  active probabilities: {active_augs if active_augs else '(none)'}")
+    suspicious = []
+    for prob_key, switch_key in [
+        ("aug_bg_noise_p", "bg_noise"),
+        ("aug_gain_p",     "random_gain"),
+        ("aug_filter_p",   "random_filter"),
+        ("aug_silence_p",  "silence_embed"),
+    ]:
+        if prob_key in cfg and prob_key not in aug_config_preview:
+            suspicious.append(
+                f"  WARN: '{prob_key}={cfg[prob_key]}' set but '{switch_key}: true' "
+                f"missing — this augmentation will NOT fire"
+            )
+    if suspicious:
+        print("AUGMENTATION CONFIG WARNINGS:")
+        for s in suspicious:
+            print(s)
     (train_loader,
      focal_val_ds, focal_val_loader,
      sc_val_ds, sc_val_loader,
