@@ -1,0 +1,97 @@
+# configs/finetune_pseudo_v4.yaml
+#
+# Phase B experiment: B0 SED + drop-don't-zero pseudo-labels + REAL
+# ambience mixing from the unlabeled Pantanal soundscapes.
+#
+# Changes vs finetune_pseudo_v3.yaml (which scored 0.883 = baseline):
+#   1. Synthetic noise augs OFF (bg_noise was a wash in v3)
+#   2. real_ambience: true   — mixes a real ambience clip into focal specs
+#   3. ambience_pool_path    — points at the .npy built by
+#                              scripts/build_ambience_pool.py
+#   4. SNR floor at -5 dB    — ambience can be louder than the bird signal
+#                              on individual windows, mimicking distant
+#                              Pantanal recordings
+#   5. random_gain / random_filter STAY ON (orthogonal, cheap, harmless)
+#
+# Everything else (model arch, fold splits, LR schedule, epochs, mixup,
+# spec_augment, gaussian_noise, pseudo-labels) is identical to v3.
+
+experiment_name: sed_finetune_pseudo_v4
+seed: 42
+
+# --- Model (UNCHANGED) ---
+model_type: sed
+backbone: tf_efficientnet_b0_ns
+num_classes: 234
+dropout: 0.3
+pretrained: false
+attention_hidden_dim: 128
+
+# --- Data: focal (UNCHANGED) ---
+fold: 0
+train_meta_csv: data/raw/train.csv
+folds_csv: data/folds/folds.csv
+spec_dir: data/processed
+audio_dir: data/raw/train_audio
+
+# --- Data: soundscape mix (UNCHANGED) ---
+soundscape_folds_csv: data/folds/folds_soundscapes.csv
+soundscape_spec_dir: data/processed_soundscapes
+soundscape_ratio: 0.3
+
+# --- Pseudo-labels (UNCHANGED — keeping the v3 csv with drop-don't-zero) ---
+pseudo_labels_csv: data/pseudo/sed_b0_v3_pseudo_dropped.csv
+pseudo_ratio: 0.15
+pseudo_min_confidence: 0.3
+pseudo_sharpening_T: 1.5
+pseudo_inference_batch_size: 64
+pseudo_source_checkpoint_pattern: experiments/sed_finetune_fold{fold}/best_model.pt
+unlabeled_soundscape_spec_dir: data/processed_unlabeled_soundscapes
+
+# --- Spec params (UNCHANGED) ---
+sample_rate: 32000
+window_seconds: 5.0
+n_mels: 128
+n_fft: 2048
+hop_length: 512
+fmax: 16000
+
+# --- Training (UNCHANGED) ---
+epochs: 12
+batch_size: 32
+num_workers: 4
+lr: 1.0e-4
+weight_decay: 1.0e-4
+warmup_epochs: 1
+scheduler: cosine
+loss: bce
+
+# --- Augmentations: baseline (UNCHANGED from v3) ---
+spec_augment: true
+time_mask_max: 50
+freq_mask_max: 20
+mixup_alpha: 0.4
+gaussian_noise_std: 0.01
+
+# --- Augmentations: domain-shift ---
+
+# v3 synthetic noise -> OFF. Empirically a wash. The real-ambience pool
+# replaces it.
+bg_noise: false
+
+# Gain/filter stay on at v3 levels — cheap, orthogonal, no evidence of harm.
+random_gain: true
+aug_gain_p: 0.5
+gain_range_db: 6.0
+
+random_filter: true
+aug_filter_p: 0.3
+
+# v4: REAL AMBIENCE MIXING — the core experiment of this run.
+real_ambience: true
+aug_real_ambience_p: 0.7              # apply on most windows; this IS the bridge
+ambience_pool_path: data/ambience_pool/pantanal_ambience.npy
+real_ambience_snr_min_db: -5.0        # ambience can exceed bird PEAK by 5 dB
+real_ambience_snr_max_db: 15.0        # ...or be 15 dB below it (quiet ambience)
+
+# silence_embed: still off. Compounds awkwardly with mixup + ambience.

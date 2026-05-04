@@ -147,6 +147,16 @@ def build_aug_config(cfg: dict) -> dict:
         aug["aug_silence_p"] = cfg.get("aug_silence_p", 0.3)
         aug["window_samples"] = int(cfg.get("sample_rate", 32000) * cfg.get("window_seconds", 5.0))
 
+    if cfg.get("real_ambience", False):
+        if "ambience_pool_path" not in cfg:
+            raise KeyError(
+                "real_ambience: true but ambience_pool_path not set in config"
+            )
+        aug["aug_real_ambience_p"] = cfg.get("aug_real_ambience_p", 0.5)
+        aug["ambience_pool_path"] = cfg["ambience_pool_path"]
+        aug["real_ambience_snr_min_db"] = cfg.get("real_ambience_snr_min_db", -5.0)
+        aug["real_ambience_snr_max_db"] = cfg.get("real_ambience_snr_max_db", 15.0)
+
     aug["sample_rate"] = cfg.get("sample_rate", 32000)
     aug["mixup_alpha"] = cfg.get("mixup_alpha", 0.4)
 
