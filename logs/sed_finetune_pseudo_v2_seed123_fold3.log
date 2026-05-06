@@ -24,3 +24,14 @@ Fine-tune: sed_finetune_pseudo_v2_seed123_fold3
   Epoch  5/12: train=0.0100  focal_auc=0.9552  sc_auc=0.8881  comb_auc=0.9571  lr=7.08e-05  (90s)
   Epoch  6/12: train=0.0097  focal_auc=0.9559  sc_auc=0.9163  comb_auc=0.9582  lr=5.72e-05  (104s) ★ BEST
   Epoch  7/12: train=0.0094  focal_auc=0.9561  sc_auc=0.9063  comb_auc=0.9583  lr=4.29e-05  (101s) ★ BEST
+  Epoch  8/12: train=0.0092  focal_auc=0.9555  sc_auc=0.9083  comb_auc=0.9579  lr=2.93e-05  (91s)
+  Epoch  9/12: train=0.0090  focal_auc=0.9553  sc_auc=0.9137  comb_auc=0.9576  lr=1.73e-05  (84s)
+  Epoch 10/12: train=0.0089  focal_auc=0.9549  sc_auc=0.9159  comb_auc=0.9574  lr=8.03e-06  (83s)
+  Epoch 11/12: train=0.0090  focal_auc=0.9552  sc_auc=0.9140  comb_auc=0.9577  lr=2.12e-06  (87s)
+  Epoch 12/12: train=0.0088  focal_auc=0.9555  sc_auc=0.9182  comb_auc=0.9580  lr=1.00e-07  (94s)
+
+================================================================
+Done: sed_finetune_pseudo_v2_seed123_fold3
+Best epoch: 7  |  best combined val AUC: 0.9583
+Outputs: experiments/sed_finetune_pseudo_v2_seed123_fold3
+================================================================

@@ -47,7 +47,7 @@ N_MELS = 128
 def load_ensemble(cfg: dict, device) -> list:
     pattern = cfg.get(
         "pseudo_source_checkpoint_pattern",
-        "experiments/sed_finetune/sed_finetune_fold{fold}/best_model.pt",
+        "experiments/sed_finetune_fold{fold}/best_model.pt",
     )
     models = []
     for f in range(5):
