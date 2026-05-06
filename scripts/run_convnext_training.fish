@@ -62,8 +62,8 @@ end
 # sed_b0 baselines must exist (needed for future ensemble inference) and
 # we do NOT want this script to touch them.
 for f in 0 1 2 3 4
-    if not test -f experiments/sed_b0_fold$f/best_model.pt
-        echo "⚠ experiments/sed_b0_fold$f/best_model.pt missing"
+    if not test -f experiments/sed_b0/sed_b0_fold$f/best_model.pt
+        echo "⚠ experiments/sed_b0/sed_b0_fold$f/best_model.pt missing"
         echo "  Not fatal for ConvNeXt training, but you need these for the final ensemble."
     end
 end
@@ -83,7 +83,7 @@ for f in 0 1 2 3 4
     set -x BIRDCLEF_RUN_NAME {$EXP_BASE}_fold{$f}
 
     echo
-    echo ">>> Fold $f starting at "(date '+%H:%M:%S')" → experiments/$BIRDCLEF_RUN_NAME"
+    echo ">>> Fold $f starting at "(date '+%H:%M:%S')" → experiments/$EXP_BASE/$BIRDCLEF_RUN_NAME"
 
     python src/training/train.py $CONFIG --fold $f
     or begin
@@ -93,8 +93,8 @@ for f in 0 1 2 3 4
     end
 
     # Verify the fold actually wrote to the right place.
-    if not test -f experiments/{$EXP_BASE}_fold{$f}/best_model.pt
-        echo "✗ Fold $f did not produce experiments/{$EXP_BASE}_fold{$f}/best_model.pt"
+    if not test -f experiments/{$EXP_BASE}/{$EXP_BASE}_fold{$f}/best_model.pt
+        echo "✗ Fold $f did not produce experiments/{$EXP_BASE}/{$EXP_BASE}_fold{$f}/best_model.pt"
         echo "  Something is wrong with run_name resolution."
         set -e BIRDCLEF_RUN_NAME
         exit 1
@@ -116,7 +116,7 @@ echo "================================================================"
 echo
 echo "Checkpoints:"
 for f in 0 1 2 3 4
-    set -l ckpt experiments/{$EXP_BASE}_fold{$f}/best_model.pt
+    set -l ckpt experiments/{$EXP_BASE}/{$EXP_BASE}_fold{$f}/best_model.pt
     if test -f $ckpt
         set -l size_mb (math --scale=1 (stat -c '%s' $ckpt) / 1048576)
         echo "  fold $f: $ckpt ($size_mb MB)"
@@ -128,7 +128,7 @@ end
 echo
 echo "Per-fold best val AUCs:"
 for f in 0 1 2 3 4
-    set -l log experiments/{$EXP_BASE}_fold{$f}/training_log.csv
+    set -l log experiments/{$EXP_BASE}/{$EXP_BASE}_fold{$f}/training_log.csv
     if test -f $log
         python -c "
 import pandas as pd

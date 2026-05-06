@@ -11,15 +11,26 @@ within each fold, and reports:
   - Overall mean lift
 
 Run from project root:
+    # SEResNeXt (default)
     python scripts/compare_seed_ensemble_oof.py
 
-Assumes experiment dir layout:
-    experiments/seresnext_finetune_fold{F}/                 (seed=42)
-    experiments/seresnext_finetune_seed{S}_fold{F}/         (seed!=42)
+    # B0 v2 multi-seed
+    python scripts/compare_seed_ensemble_oof.py \\
+        --base-name sed_finetune_pseudo_v2 \\
+        --seeds 42,123,2024
+
+Assumes experiment dir layout (post-reorg):
+    experiments/{base_name}/{base_name}_fold{F}/                 (default seed)
+    experiments/{base_name}_seed{S}/{base_name}_seed{S}_fold{F}/ (other seeds)
+
+Edge case: B0's per-seed groups in your tree are `sed_finetune_pseudo_seed2024/`
+(no "_v2_" in the parent name) while the inner runs are `sed_finetune_pseudo_v2_seed2024_fold0`.
+Use --seed-dir-pattern to override the default mapping if needed.
 """
 
 import sys
 import os
+import argparse
 from pathlib import Path
 
 import numpy as np
@@ -31,23 +42,34 @@ sys.path.insert(0, os.getcwd())
 from src.training.train import compute_macro_auc, get_target_species
 
 
-# ---------------------------------------------------------------------------
-# Config — edit these if your seeds / folds / dir naming differ
-# ---------------------------------------------------------------------------
-SEEDS = [42, 123, 2024]
-FOLDS = [0, 1, 2, 3, 4]
 EXP_ROOT = Path("experiments")
 
-# Path to any one finetune config (used to recover target_species ordering
-# and to locate the labels CSVs). Any seed/fold's saved config works.
-REFERENCE_CONFIG = EXP_ROOT / "seresnext_finetune_fold0" / "config.yaml"
 
+# ---------------------------------------------------------------------------
+# Path resolution
+# ---------------------------------------------------------------------------
 
-def exp_dir(seed: int, fold: int) -> Path:
-    """Return the experiment directory for a given (seed, fold)."""
-    if seed == 42:
-        return EXP_ROOT / f"seresnext_finetune_fold{fold}"
-    return EXP_ROOT / f"seresnext_finetune_seed{seed}_fold{fold}"
+def exp_dir(base_name: str, seed: int, fold: int,
+            default_seed: int,
+            seed_dir_pattern: str | None) -> Path:
+    """Resolve the experiment dir for (base_name, seed, fold) under the
+    nested layout: experiments/{group}/{run_name}/.
+
+    For the default seed the group is `base_name` and the run is
+    `{base_name}_fold{F}`. For other seeds the group is `{base_name}_seed{S}`
+    (overridable via seed_dir_pattern) and the run is `{base_name}_seed{S}_fold{F}`.
+    """
+    if seed == default_seed:
+        run_name = f"{base_name}_fold{fold}"
+        return EXP_ROOT / base_name / run_name
+
+    if seed_dir_pattern:
+        group = seed_dir_pattern.format(base=base_name, seed=seed)
+        run_name = f"{group}_fold{fold}"
+    else:
+        group = f"{base_name}_seed{seed}"
+        run_name = f"{group}_fold{fold}"
+    return EXP_ROOT / group / run_name
 
 
 # ---------------------------------------------------------------------------
@@ -102,7 +124,7 @@ def build_soundscape_labels(labels_csv: str, target_species: list[str],
 
 
 # ---------------------------------------------------------------------------
-# Main
+# OOF loading & per-fold evaluation
 # ---------------------------------------------------------------------------
 
 def load_oof(path: Path, key_col: str) -> tuple[list[str], np.ndarray, list[str]]:
@@ -116,19 +138,18 @@ def load_oof(path: Path, key_col: str) -> tuple[list[str], np.ndarray, list[str]
 
 def evaluate_fold(fold: int, target_species: list[str],
                   focal_meta_csv: str,
-                  soundscape_labels_csv: str | None) -> dict:
+                  soundscape_labels_csv: str | None,
+                  base_name: str, seeds: list[int], default_seed: int,
+                  seed_dir_pattern: str | None) -> dict:
     """Load OOF preds for all seeds on this fold, compute single-seed and
-    ensemble AUCs over the combined (focal + soundscape) val set.
-
-    Returns dict with per-seed and ensemble AUCs for this fold.
-    """
+    ensemble AUCs over the combined (focal + soundscape) val set."""
     focal_preds_per_seed = []
     sc_preds_per_seed = []
     focal_keys = None
     sc_keys = None
 
-    for seed in SEEDS:
-        d = exp_dir(seed, fold)
+    for seed in seeds:
+        d = exp_dir(base_name, seed, fold, default_seed, seed_dir_pattern)
         focal_path = d / "oof_preds.csv"
         sc_path = d / "oof_preds_soundscape.csv"
 
@@ -155,18 +176,16 @@ def evaluate_fold(fold: int, target_species: list[str],
                 )
             sc_preds_per_seed.append(probs_s)
 
-    # Build label matrices once per fold
     focal_Y = build_focal_labels(focal_meta_csv, target_species, focal_keys)
 
     sc_Y = None
     if sc_keys and soundscape_labels_csv:
         sc_Y = build_soundscape_labels(soundscape_labels_csv, target_species, sc_keys)
 
-    # Per-seed combined AUC
     per_seed_auc = {}
-    for seed, fp in zip(SEEDS, focal_preds_per_seed):
+    for seed, fp in zip(seeds, focal_preds_per_seed):
         if sc_Y is not None and sc_preds_per_seed:
-            sp = sc_preds_per_seed[SEEDS.index(seed)]
+            sp = sc_preds_per_seed[seeds.index(seed)]
             preds = np.concatenate([fp, sp], axis=0)
             labels = np.concatenate([focal_Y, sc_Y], axis=0)
         else:
@@ -174,7 +193,6 @@ def evaluate_fold(fold: int, target_species: list[str],
             labels = focal_Y
         per_seed_auc[seed] = compute_macro_auc(labels, preds)
 
-    # Ensemble: average probs across seeds
     focal_ens = np.mean(np.stack(focal_preds_per_seed, axis=0), axis=0)
     if sc_preds_per_seed and sc_Y is not None:
         sc_ens = np.mean(np.stack(sc_preds_per_seed, axis=0), axis=0)
@@ -188,18 +206,56 @@ def evaluate_fold(fold: int, target_species: list[str],
     return {"per_seed": per_seed_auc, "ensemble": ens_auc}
 
 
+# ---------------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------------
+
 def main():
-    # Load reference config to find label CSV paths and species ordering
-    if not REFERENCE_CONFIG.exists():
+    parser = argparse.ArgumentParser(description=__doc__,
+                                     formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--base-name", default="seresnext_finetune",
+                        help="Run-name prefix without _fold suffix (default: seresnext_finetune)")
+    parser.add_argument("--seeds", default="42,123,2024",
+                        help="Comma-separated seed list (default: 42,123,2024)")
+    parser.add_argument("--default-seed", type=int, default=42,
+                        help="Seed treated as the 'no suffix' baseline run (default: 42)")
+    parser.add_argument("--folds", default="0,1,2,3,4",
+                        help="Comma-separated fold list (default: 0,1,2,3,4)")
+    parser.add_argument("--seed-dir-pattern", default=None,
+                        help="Override group naming for non-default seeds. "
+                             "Use {base} and {seed} placeholders. "
+                             "Example: '{base}_seed{seed}'. "
+                             "Use this if your seed-ensemble groups don't match "
+                             "the default '{base_name}_seed{seed}' convention.")
+    parser.add_argument("--reference-config", default=None,
+                        help="Path to a config.yaml containing train_meta_csv "
+                             "and soundscape_labels_csv. Defaults to fold0's config.")
+    parser.add_argument("--output-csv", default="ensemble_oof_comparison.csv",
+                        help="Where to write the detailed per-fold table")
+    args = parser.parse_args()
+
+    seeds = [int(s) for s in args.seeds.split(",")]
+    folds = [int(f) for f in args.folds.split(",")]
+
+    # Default reference config: fold0 of the default-seed run
+    if args.reference_config is None:
+        ref_dir = exp_dir(args.base_name, args.default_seed, folds[0],
+                          args.default_seed, args.seed_dir_pattern)
+        reference_config = ref_dir / "config.yaml"
+    else:
+        reference_config = Path(args.reference_config)
+
+    if not reference_config.exists():
         raise FileNotFoundError(
-            f"Reference config not found: {REFERENCE_CONFIG}. "
-            f"Edit REFERENCE_CONFIG at top of script if needed."
+            f"Reference config not found: {reference_config}. "
+            f"Pass --reference-config to override."
         )
-    with open(REFERENCE_CONFIG) as f:
+    with open(reference_config) as f:
         cfg = yaml.safe_load(f)
 
     target_species = get_target_species(cfg)
-    print(f"Loaded {len(target_species)} target species from reference config")
+    print(f"Loaded {len(target_species)} target species from {reference_config}")
+    print(f"base_name={args.base_name}  seeds={seeds}  default_seed={args.default_seed}")
 
     focal_meta_csv = cfg["train_meta_csv"]
     soundscape_labels_csv = cfg.get("soundscape_labels_csv")
@@ -209,10 +265,11 @@ def main():
               f"falling back to focal-only AUC)")
         soundscape_labels_csv = None
 
-    # Per-fold evaluation
     print(f"\n{'='*72}")
-    header = f"{'fold':>4} | " + " | ".join(f"seed={s:>4}" for s in SEEDS) + \
-             f" | {'mean':>7} | {'best':>7} | {'ensemble':>8} | {'lift_v_mean':>11} | {'lift_v_best':>11}"
+    header = (f"{'fold':>4} | "
+              + " | ".join(f"seed={s:>4}" for s in seeds)
+              + f" | {'mean':>7} | {'best':>7} | {'ensemble':>8} "
+              + f"| {'lift_v_mean':>11} | {'lift_v_best':>11}")
     print(header)
     print('-' * len(header))
 
@@ -220,17 +277,19 @@ def main():
     lifts_v_mean = []
     lifts_v_best = []
 
-    for fold in FOLDS:
+    for fold in folds:
         try:
             r = evaluate_fold(fold, target_species, focal_meta_csv,
-                              soundscape_labels_csv)
+                              soundscape_labels_csv,
+                              args.base_name, seeds, args.default_seed,
+                              args.seed_dir_pattern)
         except FileNotFoundError as e:
             print(f"  fold {fold}: SKIPPED — {e}")
             continue
 
         per_seed = r["per_seed"]
         ens = r["ensemble"]
-        seed_vals = [per_seed[s] for s in SEEDS]
+        seed_vals = [per_seed[s] for s in seeds]
         mean_seed = float(np.mean(seed_vals))
         best_seed = float(np.max(seed_vals))
         lift_mean = ens - mean_seed
@@ -238,15 +297,14 @@ def main():
         lifts_v_mean.append(lift_mean)
         lifts_v_best.append(lift_best)
 
-        seed_strs = " | ".join(f"  {per_seed[s]:.4f}" for s in SEEDS)
+        seed_strs = " | ".join(f"  {per_seed[s]:.4f}" for s in seeds)
         print(f"{fold:>4} | {seed_strs} | {mean_seed:.4f} | {best_seed:.4f} | "
               f"  {ens:.4f} |    {lift_mean:+.4f} |    {lift_best:+.4f}")
 
         all_results.append({"fold": fold, "ensemble_auc": ens,
                             "mean_seed_auc": mean_seed, "best_seed_auc": best_seed,
-                            **{f"seed_{s}_auc": per_seed[s] for s in SEEDS}})
+                            **{f"seed_{s}_auc": per_seed[s] for s in seeds}})
 
-    # Overall summary
     if lifts_v_mean:
         print('-' * len(header))
         print(f"\nOverall ensemble lift:")
@@ -256,7 +314,7 @@ def main():
               f"(per-fold: {[f'{x:+.4f}' for x in lifts_v_best]})")
 
         print(f"\nInterpretation:")
-        mean_lift = np.mean(lifts_v_mean)
+        mean_lift = float(np.mean(lifts_v_mean))
         if mean_lift >= 0.003:
             print(f"  Solid lift ({mean_lift:+.4f}). Ensemble is worth submitting.")
         elif mean_lift >= 0.001:
@@ -266,8 +324,7 @@ def main():
             print(f"  Minimal lift ({mean_lift:+.4f}). Seeds aren't producing diverse")
             print(f"  enough errors. Skip pure seed ensemble; pivot to architecture diversity.")
 
-    # Save detailed CSV
-    out_csv = Path("ensemble_oof_comparison.csv")
+    out_csv = Path(args.output_csv)
     pd.DataFrame(all_results).to_csv(out_csv, index=False)
     print(f"\nDetailed results written to: {out_csv}")
 

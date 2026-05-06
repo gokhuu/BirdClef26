@@ -10,8 +10,8 @@ the measurement.
 
 Usage:
     python scripts/benchmark_cpu_inference.py \\
-        --models experiments/effv2s_finetune_fold0/model_int8.onnx \\
-                 experiments/effv2s_finetune_fold1/model_int8.onnx \\
+        --models experiments/effv2s_finetune/effv2s_finetune_fold0/model_int8.onnx \\
+                 experiments/effv2s_finetune/effv2s_finetune_fold1/model_int8.onnx \\
         --num_test_clips 50 \\
         --clips_per_audio 12 \\
         --num_threads 4

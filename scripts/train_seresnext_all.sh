@@ -20,8 +20,8 @@ mkdir -p "$LOG_DIR"
 # Pre-flight: clean up any leftover smoke / partial dirs
 echo "Pre-flight: cleaning stale SEResNeXt dirs..."
 for d in experiments/seresnext_smoke_fold0 \
-         experiments/seresnext_focal_fold{0,1,2,3,4} \
-         experiments/seresnext_finetune_fold{0,1,2,3,4}; do
+         experiments/seresnext_focal/seresnext_focal_fold{0,1,2,3,4} \
+         experiments/seresnext_finetune/seresnext_finetune_fold{0,1,2,3,4}; do
     if [ -d "$d" ]; then
         echo "  removing $d"
         rm -rf "$d"
@@ -51,7 +51,7 @@ python -m src.training.train configs/smoke_seresnext.yaml --fold 0 \
     2>&1 | tee "${LOG_DIR}/seresnext_smoke.log"
 
 # Check the smoke result
-smoke_csv="experiments/seresnext_smoke_fold0/training_log.csv"
+smoke_csv="experiments/seresnext_smoke/seresnext_smoke_fold0/training_log.csv"
 if [ -f "$smoke_csv" ]; then
     smoke_auc=$(awk -F',' 'NR==3 {print $4}' "$smoke_csv")
     echo ""
@@ -96,7 +96,7 @@ echo "Phase 1 complete at: $(date)"
 echo "Per-fold best focal val_auc:"
 echo "===================================================="
 for f in $FOLDS; do
-    log_csv="experiments/seresnext_focal_fold${f}/training_log.csv"
+    log_csv="experiments/seresnext_focal/seresnext_focal_fold${f}/training_log.csv"
     if [ -f "$log_csv" ]; then
         best=$(awk -F',' 'NR>1 {print $4}' "$log_csv" | sort -rn | head -1)
         echo "  fold ${f}: best val_auc = ${best}"
@@ -114,7 +114,7 @@ echo "PHASE 2: Soundscape finetune, 5 folds, ~1.4h total"
 echo "Started at: $(date)"
 echo "===================================================="
 for f in $FOLDS; do
-    ckpt="experiments/seresnext_focal_fold${f}/best_model.pt"
+    ckpt="experiments/seresnext_focal/seresnext_focal_fold${f}/best_model.pt"
     if [ ! -f "$ckpt" ]; then
         echo ""
         echo "!!! SKIPPING fold ${f} finetune — Phase 1 checkpoint missing: $ckpt"
@@ -137,7 +137,7 @@ echo "Phase 2 complete at: $(date)"
 echo "Per-fold best combined val_auc:"
 echo "===================================================="
 for f in $FOLDS; do
-    log_csv="experiments/seresnext_finetune_fold${f}/training_log.csv"
+    log_csv="experiments/seresnext_finetune/seresnext_finetune_fold${f}/training_log.csv"
     if [ -f "$log_csv" ]; then
         # finetune.py columns:
         # epoch,train_loss,focal_val_loss,focal_val_auc,soundscape_val_loss,
@@ -167,6 +167,6 @@ echo ""
 echo "Next steps:"
 echo "  1. Export ONNX:    bash scripts/export_seresnext_onnx.sh"
 echo "  2. Benchmark CPU:  python scripts/benchmark_cpu_inference.py \\"
-echo "                       --models experiments/seresnext_finetune_fold*/model_int8_fp32.onnx \\"
+echo "                       --models experiments/seresnext_finetune/seresnext_finetune_fold*/model_int8_fp32.onnx \\"
 echo "                       --num_threads 4 --remaining_budget_min 35"
 echo "  3. Upload to NEW Kaggle dataset (do NOT overwrite B0!)"
