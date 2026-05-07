@@ -21,19 +21,19 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from src.models import build_model
 from src.models.sed import BirdCLEFSED
 
-# ADAPT: swap in whichever config loader you currently use.
-from src.utils.config import load_config
+import yaml
 
+def load_config(path):
+    with open(path) as f:
+        return yaml.safe_load(f)
 
 ATOL = 1e-4
 SPEARMAN_MIN = 0.99
-
 
 def _spearman(a: np.ndarray, b: np.ndarray) -> float:
     from scipy.stats import spearmanr
 
     return float(spearmanr(a.ravel(), b.ravel()).correlation)
-
 
 class _SEDDualOutputWrapper(nn.Module):
     """Wraps BirdCLEFSED so its forward returns (logits_pool, logits_max).
@@ -47,11 +47,11 @@ class _SEDDualOutputWrapper(nn.Module):
         return self.model.forward_dual(x)
 
 
-def _make_dummy(cfg, batch_size: int = 1) -> torch.Tensor:
-    # ADAPT: align field names with your cfg schema.
-    n_mels = getattr(cfg, "n_mels", 128)
-    n_frames = getattr(cfg, "n_frames", 313)
-    in_chans = getattr(cfg, "in_chans", 1)
+def _make_dummy(cfg: dict, batch_size: int = 1) -> torch.Tensor:
+    # ADAPT: align field names with your cfg schema if these are nested.
+    n_mels = cfg.get("n_mels", 128)
+    n_frames = cfg.get("n_frames", 313)
+    in_chans = cfg.get("in_chans", 1)
     return torch.randn(batch_size, in_chans, n_mels, n_frames)
 
 

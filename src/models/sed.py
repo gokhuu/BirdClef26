@@ -20,6 +20,7 @@ Pipeline:
     -> attention pooling over time -> (B, C)
     -> dropout + linear            -> (B, num_classes) logits
 """
+
 import timm
 import torch
 import torch.nn as nn
@@ -46,53 +47,12 @@ class AttentionPooling(nn.Module):
             nn.Conv1d(hidden_dim, 1, kernel_size=1),
         )
 
-    def _normalize_and_expand(self, x: torch.Tensor) -> torch.Tensor:
-        if self.input_normalize:
-            x_mean = x.mean(dim=(2, 3), keepdim=True)
-            x_std = x.std(dim=(2, 3), keepdim=True).clamp(min=1e-6)
-            x = (x - x_mean) / x_std
-        if self.encoder_in_chans == 3:
-            x = x.expand(-1, 3, -1, -1)
-        return x
-
-    def _encode_to_features(self, x: torch.Tensor) -> torch.Tensor:
-        # (B, 1|3, F, T_in) -> (B, C, T)
-        x = self._normalize_and_expand(x)
-        features = self.encoder(x)  # (B, C, H', W')
-        features = features.mean(dim=2)  # mean over freq -> (B, C, T)
-        return features
-
-    def _head_linear(self) -> nn.Linear:
-        # Defensive: head is currently Sequential(Dropout, Linear); locate the Linear
-        # by type so this still works if the head structure is ever tweaked.
-        linears = [m for m in self.head.modules() if isinstance(m, nn.Linear)]
-        if len(linears) != 1:
-            raise RuntimeError(
-                f"BirdCLEFSED.head must contain exactly one nn.Linear, found {len(linears)}"
-            )
-        return linears[0]
-
-    def forward(self, x: torch.Tensor, return_attention: bool = False):
-        # x: (B, 1, n_mels, T)
-        features = self._encode_to_features(x)               # (B, C, T)
-        pooled, att_weights = self.attention_pool(features)  # (B, C), (B, 1, T)
-        logits = self.head(pooled)                           # (B, num_classes)
-        if return_attention:
-            return logits, att_weights
-        return logits
-
-def forward_dual(self, x: torch.Tensor):
-    """Inference-only: returns (logits_pool, logits_max), each (B, num_classes).
-    Reuses the head Linear; no new parameters."""
-    features = self._encode_to_features(x)               # (B, C, T)
-    pooled, _ = self.attention_pool(features)            # (B, C)
-    logits_pool = self.head(pooled)                      # (B, num_classes)
-
-    linear = self._head_linear()
-    # (B, C, T) -> (B, T, C) -> Linear -> (B, T, num_classes) -> max over T
-    frame_logits = F.linear(features.transpose(1, 2), linear.weight, linear.bias)
-    logits_max = frame_logits.amax(dim=1)                # (B, num_classes)
-    return logits_pool, logits_max
+    def forward(self, features: torch.Tensor):
+        # features: (B, C, T)
+        att_logits = self.attention(features)  # (B, 1, T)
+        att_weights = F.softmax(att_logits, dim=-1)  # (B, 1, T)
+        pooled = (features * att_weights).sum(dim=-1)  # (B, C)
+        return pooled, att_weights
 
 
 class BirdCLEFSED(nn.Module):
@@ -149,27 +109,57 @@ class BirdCLEFSED(nn.Module):
             nn.Linear(feature_dim, num_classes),
         )
 
-    def forward(self, x: torch.Tensor, return_attention: bool = False):
-        # x: (B, 1, n_mels, T)
+    # ---- internal helpers ----------------------------------------------------
 
-        # Per-sample standardization (ConvNeXt needs this; B0 does not).
+    def _normalize_and_expand(self, x: torch.Tensor) -> torch.Tensor:
         if self.input_normalize:
             x_mean = x.mean(dim=(2, 3), keepdim=True)
             x_std = x.std(dim=(2, 3), keepdim=True).clamp(min=1e-6)
             x = (x - x_mean) / x_std
-
-        # Broadcast mono -> 3ch if encoder was built with in_chans=3.
         if self.encoder_in_chans == 3:
             x = x.expand(-1, 3, -1, -1)
+        return x
 
-        features = self.encoder(x)           # (B, C, H', W')
-        features = features.mean(dim=2)      # mean over frequency -> (B, C, W')
-        pooled, att_weights = self.attention_pool(features)  # (B, C), (B, 1, W')
-        logits = self.head(pooled)           # (B, num_classes)
+    def _encode_to_features(self, x: torch.Tensor) -> torch.Tensor:
+        # (B, 1|3, n_mels, T_in) -> (B, C, T)
+        x = self._normalize_and_expand(x)
+        features = self.encoder(x)  # (B, C, H', W')
+        features = features.mean(dim=2)  # mean over frequency -> (B, C, T)
+        return features
 
+    def _head_linear(self) -> nn.Linear:
+        # Defensive: head is currently Sequential(Dropout, Linear); locate the
+        # Linear by type so this still works if the head structure is tweaked.
+        linears = [m for m in self.head.modules() if isinstance(m, nn.Linear)]
+        if len(linears) != 1:
+            raise RuntimeError(
+                f"BirdCLEFSED.head must contain exactly one nn.Linear, found {len(linears)}"
+            )
+        return linears[0]
+
+    # ---- forward paths -------------------------------------------------------
+
+    def forward(self, x: torch.Tensor, return_attention: bool = False):
+        # x: (B, 1, n_mels, T)
+        features = self._encode_to_features(x)  # (B, C, T)
+        pooled, att_weights = self.attention_pool(features)  # (B, C), (B, 1, T)
+        logits = self.head(pooled)  # (B, num_classes)
         if return_attention:
             return logits, att_weights
         return logits
+
+    def forward_dual(self, x: torch.Tensor):
+        """Inference-only: returns (logits_pool, logits_max), each (B, num_classes).
+        Reuses the head Linear; no new parameters."""
+        features = self._encode_to_features(x)  # (B, C, T)
+        pooled, _ = self.attention_pool(features)  # (B, C)
+        logits_pool = self.head(pooled)  # (B, num_classes)
+
+        linear = self._head_linear()
+        # (B, C, T) -> (B, T, C) -> Linear -> (B, T, num_classes) -> max over T
+        frame_logits = F.linear(features.transpose(1, 2), linear.weight, linear.bias)
+        logits_max = frame_logits.amax(dim=1)  # (B, num_classes)
+        return logits_pool, logits_max
 
     @torch.no_grad()
     def extract_attention(self, x: torch.Tensor):
