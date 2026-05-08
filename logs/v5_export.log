@@ -1,0 +1,65 @@
+=== fold 0 ===
+/home/gokhuu/miniconda3/envs/birdclef/lib/python3.11/site-packages/timm/models/_factory.py:138: UserWarning: Mapping deprecated model name tf_efficientnet_b0_ns to current tf_efficientnet_b0.ns_jft_in1k.
+  model = create_fn(
+/home/gokhuu/portfolio/BirdClef26/scripts/export_onnx.py:127: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  state = torch.load(ckpt_path, map_location="cpu")
+Exporting BirdCLEFSED  ->  experiments/sed_finetune_pseudo_v5_fold0/best_model_dual.onnx
+  mode: dual-output (SED)
+  [logits_pool]  max|Δ|=2.86e-05  spearman=1.000000
+  [logits_max]  max|Δ|=3.55e-05  spearman=1.000000
+  verification: OK
+Done.
+=== fold 1 ===
+/home/gokhuu/miniconda3/envs/birdclef/lib/python3.11/site-packages/timm/models/_factory.py:138: UserWarning: Mapping deprecated model name tf_efficientnet_b0_ns to current tf_efficientnet_b0.ns_jft_in1k.
+  model = create_fn(
+/home/gokhuu/portfolio/BirdClef26/scripts/export_onnx.py:127: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  state = torch.load(ckpt_path, map_location="cpu")
+Exporting BirdCLEFSED  ->  experiments/sed_finetune_pseudo_v5_fold1/best_model_dual.onnx
+  mode: dual-output (SED)
+  [logits_pool]  max|Δ|=1.13e-04  spearman=1.000000
+Traceback (most recent call last):
+  File "/home/gokhuu/portfolio/BirdClef26/scripts/export_onnx.py", line 162, in <module>
+    main()
+  File "/home/gokhuu/portfolio/BirdClef26/scripts/export_onnx.py", line 157, in main
+    verify_onnx(model, dummy, args.output, is_sed)
+  File "/home/gokhuu/portfolio/BirdClef26/scripts/export_onnx.py", line 120, in verify_onnx
+    raise RuntimeError(f"{name}: max abs diff {max_abs:.2e} > atol {ATOL:.2e}")
+RuntimeError: logits_pool: max abs diff 1.13e-04 > atol 1.00e-04
+=== fold 2 ===
+/home/gokhuu/miniconda3/envs/birdclef/lib/python3.11/site-packages/timm/models/_factory.py:138: UserWarning: Mapping deprecated model name tf_efficientnet_b0_ns to current tf_efficientnet_b0.ns_jft_in1k.
+  model = create_fn(
+/home/gokhuu/portfolio/BirdClef26/scripts/export_onnx.py:127: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  state = torch.load(ckpt_path, map_location="cpu")
+Exporting BirdCLEFSED  ->  experiments/sed_finetune_pseudo_v5_fold2/best_model_dual.onnx
+  mode: dual-output (SED)
+  [logits_pool]  max|Δ|=2.48e-05  spearman=1.000000
+  [logits_max]  max|Δ|=2.00e-05  spearman=1.000000
+  verification: OK
+Done.
+=== fold 3 ===
+/home/gokhuu/miniconda3/envs/birdclef/lib/python3.11/site-packages/timm/models/_factory.py:138: UserWarning: Mapping deprecated model name tf_efficientnet_b0_ns to current tf_efficientnet_b0.ns_jft_in1k.
+  model = create_fn(
+/home/gokhuu/portfolio/BirdClef26/scripts/export_onnx.py:127: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  state = torch.load(ckpt_path, map_location="cpu")
+Exporting BirdCLEFSED  ->  experiments/sed_finetune_pseudo_v5_fold3/best_model_dual.onnx
+  mode: dual-output (SED)
+  [logits_pool]  max|Δ|=3.94e-03  spearman=1.000000
+Traceback (most recent call last):
+  File "/home/gokhuu/portfolio/BirdClef26/scripts/export_onnx.py", line 162, in <module>
+    main()
+  File "/home/gokhuu/portfolio/BirdClef26/scripts/export_onnx.py", line 157, in main
+    verify_onnx(model, dummy, args.output, is_sed)
+  File "/home/gokhuu/portfolio/BirdClef26/scripts/export_onnx.py", line 120, in verify_onnx
+    raise RuntimeError(f"{name}: max abs diff {max_abs:.2e} > atol {ATOL:.2e}")
+RuntimeError: logits_pool: max abs diff 3.94e-03 > atol 1.00e-04
+=== fold 4 ===
+/home/gokhuu/miniconda3/envs/birdclef/lib/python3.11/site-packages/timm/models/_factory.py:138: UserWarning: Mapping deprecated model name tf_efficientnet_b0_ns to current tf_efficientnet_b0.ns_jft_in1k.
+  model = create_fn(
+/home/gokhuu/portfolio/BirdClef26/scripts/export_onnx.py:127: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  state = torch.load(ckpt_path, map_location="cpu")
+Exporting BirdCLEFSED  ->  experiments/sed_finetune_pseudo_v5_fold4/best_model_dual.onnx
+  mode: dual-output (SED)
+  [logits_pool]  max|Δ|=7.06e-05  spearman=1.000000
+  [logits_max]  max|Δ|=3.15e-05  spearman=1.000000
+  verification: OK
+Done.

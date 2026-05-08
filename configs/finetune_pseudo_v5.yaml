@@ -1,0 +1,88 @@
+# configs/finetune_pseudo_v5.yaml
+#
+# Changes vs v4 (which scored 0.883 = no movement from v3):
+#   1. Cleaner ambience pool — filtered to drop tonal/bird-contaminated clips
+#   2. snr_min_db raised: -5 -> +3
+#      Defense-in-depth: even if a contaminated clip slipped past the filter,
+#      it's now always at least 3 dB below the focal bird peak, so the focal
+#      bird (which matches the label) stays dominant.
+#   3. aug_real_ambience_p kept at 0.7 — the previous rate was fine; the
+#      issue was data quality, not exposure rate.
+#
+# Everything else identical to v4.
+
+experiment_name: sed_finetune_pseudo_v5
+seed: 42
+
+# --- Model (UNCHANGED) ---
+model_type: sed
+backbone: tf_efficientnet_b0_ns
+num_classes: 234
+dropout: 0.3
+pretrained: false
+attention_hidden_dim: 128
+
+# --- Data: focal (UNCHANGED) ---
+fold: 0
+train_meta_csv: data/raw/train.csv
+folds_csv: data/folds/folds.csv
+spec_dir: data/processed
+audio_dir: data/raw/train_audio
+
+# --- Data: soundscape mix (UNCHANGED) ---
+soundscape_folds_csv: data/folds/folds_soundscapes.csv
+soundscape_spec_dir: data/processed_soundscapes
+soundscape_ratio: 0.3
+
+# --- Pseudo-labels (UNCHANGED) ---
+pseudo_labels_csv: data/pseudo/sed_b0_v3_pseudo_dropped.csv
+pseudo_ratio: 0.15
+pseudo_min_confidence: 0.3
+pseudo_sharpening_T: 1.5
+pseudo_inference_batch_size: 64
+pseudo_source_checkpoint_pattern: experiments/sed_finetune_fold{fold}/best_model.pt
+unlabeled_soundscape_spec_dir: data/processed_unlabeled_soundscapes
+
+# --- Spec params (UNCHANGED) ---
+sample_rate: 32000
+window_seconds: 5.0
+n_mels: 128
+n_fft: 2048
+hop_length: 512
+fmax: 16000
+
+# --- Training (UNCHANGED) ---
+init_checkpoint: experiments/sed_finetune/sed_finetune_fold{fold}/best_model.pt
+epochs: 12
+batch_size: 32
+num_workers: 4
+lr: 1.0e-4
+weight_decay: 1.0e-4
+warmup_epochs: 1
+scheduler: cosine
+loss: bce
+
+
+# --- Augmentations: baseline (UNCHANGED) ---
+spec_augment: true
+time_mask_max: 50
+freq_mask_max: 20
+mixup_alpha: 0.4
+gaussian_noise_std: 0.01
+
+# --- Augmentations: domain-shift ---
+bg_noise: false
+
+random_gain: true
+aug_gain_p: 0.5
+gain_range_db: 6.0
+
+random_filter: true
+aug_filter_p: 0.3
+
+# v5: cleaned ambience pool, safer SNR floor
+real_ambience: true
+aug_real_ambience_p: 0.7
+ambience_pool_path: data/ambience_pool/pantanal_ambience_clean.npy   # CHANGED
+real_ambience_snr_min_db: 3.0                                         # CHANGED from -5.0
+real_ambience_snr_max_db: 15.0                                        # unchanged
