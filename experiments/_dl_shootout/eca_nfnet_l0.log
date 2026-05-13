@@ -1,0 +1,19 @@
+Seed: 42
+Device: cuda  (NVIDIA RTX PRO 500 Blackwell Generation Laptop GPU)
+Data: fold 0 — 28431 train, 7118 val, 234 classes
+Model: eca_nfnet_l0  params=22,673,175
+  Loss: BCEWithLogitsLoss
+
+============================================================
+Training: shootout_eca_nfnet_l0_fold0
+============================================================
+
+  Epoch  1/3: train_loss=0.0871  val_loss=0.0302  val_auc=0.5382  lr=5.00e-04  (231s) ★ BEST
+  Epoch  2/3: train_loss=0.0278  val_loss=0.0210  val_auc=0.8632  lr=2.50e-04  (227s) ★ BEST
+  Epoch  3/3: train_loss=0.0200  val_loss=0.0165  val_auc=0.9142  lr=1.00e-07  (218s) ★ BEST
+
+============================================================
+Done: shootout_eca_nfnet_l0_fold0
+Best epoch: 3  |  Best validation AUC: 0.9142
+Outputs saved to: experiments\shootout_eca_nfnet_l0_fold0
+============================================================

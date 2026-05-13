@@ -1,0 +1,19 @@
+Seed: 42
+Device: cuda  (NVIDIA RTX PRO 500 Blackwell Generation Laptop GPU)
+Data: fold 0 — 28431 train, 7118 val, 234 classes
+Model: regnety_032  params=18,470,597
+  Loss: BCEWithLogitsLoss
+
+============================================================
+Training: shootout_regnety_032_fold0
+============================================================
+
+  Epoch  1/3: train_loss=0.1379  val_loss=0.0350  val_auc=0.5122  lr=5.00e-04  (253s) ★ BEST
+  Epoch  2/3: train_loss=0.0286  val_loss=0.0235  val_auc=0.8131  lr=2.50e-04  (226s) ★ BEST
+  Epoch  3/3: train_loss=0.0223  val_loss=0.0189  val_auc=0.8861  lr=1.00e-07  (226s) ★ BEST
+
+============================================================
+Done: shootout_regnety_032_fold0
+Best epoch: 3  |  Best validation AUC: 0.8861
+Outputs saved to: experiments\shootout_regnety_032_fold0
+============================================================

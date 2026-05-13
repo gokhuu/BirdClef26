@@ -1,0 +1,19 @@
+Seed: 42
+Device: cuda  (NVIDIA RTX PRO 500 Blackwell Generation Laptop GPU)
+Data: fold 0 — 28431 train, 7118 val, 234 classes
+Model: convnext_nano.in12k_ft_in1k  params=15,184,731
+  Loss: BCEWithLogitsLoss
+
+============================================================
+Training: shootout_convnext_nano_fold0
+============================================================
+
+  Epoch  1/3: train_loss=0.0933  val_loss=0.0324  val_auc=0.5090  lr=5.00e-04  (271s) ★ BEST
+  Epoch  2/3: train_loss=0.0312  val_loss=0.0298  val_auc=0.5156  lr=2.50e-04  (262s) ★ BEST
+  Epoch  3/3: train_loss=0.0299  val_loss=0.0296  val_auc=0.5186  lr=1.00e-07  (258s) ★ BEST
+
+============================================================
+Done: shootout_convnext_nano_fold0
+Best epoch: 3  |  Best validation AUC: 0.5186
+Outputs saved to: experiments\shootout_convnext_nano_fold0
+============================================================
