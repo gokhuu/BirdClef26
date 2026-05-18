@@ -34,6 +34,10 @@ else:
 
     OUTPUT_PATH     = 'submissions/baseline_ensemble/submission.csv'
 
+# Pre-computed mel spec cache from training (src/data/preprocess.py).
+# Used by validate.py as the canonical mel format. Kaggle doesn't need this.
+SPEC_DIR = 'data/processed'
+
 
 # ─── Spectrogram (MUST match src/data/preprocess.py exactly) ─────────
 SAMPLE_RATE      = 32000

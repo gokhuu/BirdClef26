@@ -112,7 +112,12 @@ def extract_classical_features(mel_db):
 # NN ONNX LOADING + INFERENCE
 # ══════════════════════════════════════════════════════════════════════
 def find_onnx_for_arch(arch_cfg, n_folds=5):
-    """Find ONNX files for one architecture. Returns list of paths (may be <n_folds)."""
+    """Find ONNX files for one architecture. Returns list of paths (may be <n_folds).
+
+    Strict matching only: walks dir_patterns × onnx_basenames per fold.
+    Does NOT do a blind '**/*.onnx' glob — that fallback caused different archs sharing
+    the same model_dir locally to grab each other's files.
+    """
     paths = []
     for fold in range(n_folds):
         found = None
@@ -124,12 +129,6 @@ def find_onnx_for_arch(arch_cfg, n_folds=5):
             if found: break
         if found:
             paths.append(found)
-    if not paths:
-        # Flat-layout fallback: model_dir/**/*.onnx
-        all_onnx = sorted(glob.glob(os.path.join(arch_cfg['model_dir'], '**', '*.onnx'),
-                                    recursive=True))
-        regular = [f for f in all_onnx if 'quantized' not in f]
-        paths = (regular if regular else all_onnx)[:n_folds]
     return paths
 
 
